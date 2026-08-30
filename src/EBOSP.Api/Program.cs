@@ -36,6 +36,11 @@ builder.Services.AddOpenApi();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
+// Authorization policy framework (dev guide §9). No authentication scheme is registered yet -
+// that lands with Identity (Phase 2) - but the policy registration point exists now so every
+// module adds its policies here instead of inventing ad-hoc [Authorize] checks.
+builder.Services.AddAuthorization();
+
 builder.Services
     .AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("database");
