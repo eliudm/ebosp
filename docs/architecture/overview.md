@@ -35,7 +35,9 @@ The complete system design (DFDs, ERD, event flows, deployment, CI/CD) and the e
 - [`01-system-design-specification.md`](../source-specs/01-system-design-specification.md) — what to build
 - [`02-development-guide.md`](../source-specs/02-development-guide.md) — how to build it, in order
 
-See also [`configuration.md`](configuration.md) for the configuration/secrets strategy, and [`../decisions/`](../decisions/) for ADRs recording choices not fixed by the spec (database engine, etc).
+See also [`configuration.md`](configuration.md) for the configuration/secrets strategy,
+[`idempotency.md`](idempotency.md) for the idempotency convention, and [`../decisions/`](../decisions/)
+for ADRs recording choices not fixed by the spec (database engine, etc).
 
 ## Sources
 - Microsoft Azure Architecture Center
