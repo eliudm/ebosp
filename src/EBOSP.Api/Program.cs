@@ -24,6 +24,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 }
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();

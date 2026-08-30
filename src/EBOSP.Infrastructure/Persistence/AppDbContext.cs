@@ -1,3 +1,4 @@
+using EBOSP.Application.Common;
 using EBOSP.Infrastructure.Outbox;
 using Microsoft.EntityFrameworkCore;
 
@@ -5,9 +6,11 @@ namespace EBOSP.Infrastructure.Persistence;
 
 /// <summary>
 /// The single EF Core context for the modular monolith (ADR-0001). Module-specific entity sets
-/// are added here as each module is implemented, starting with Identity in Phase 2.
+/// are added here as each module is implemented, starting with Identity in Phase 2. Also serves
+/// as the <see cref="IUnitOfWork"/> implementation - SaveChangesAsync already gives the
+/// single-transaction-per-request semantics the abstraction needs (dev guide §9).
 /// </summary>
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IUnitOfWork
 {
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
