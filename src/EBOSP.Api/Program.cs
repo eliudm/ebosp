@@ -24,6 +24,9 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 builder.Services
     .AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("database");
@@ -31,6 +34,7 @@ builder.Services
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseExceptionHandler();
 app.UseMiddleware<CorrelationIdMiddleware>();
 
 if (app.Environment.IsDevelopment())
