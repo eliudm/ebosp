@@ -1,3 +1,4 @@
+using EBOSP.Api.Common;
 using EBOSP.Application.Common;
 using EBOSP.Infrastructure.Common;
 using EBOSP.Infrastructure.Persistence;
@@ -15,6 +16,8 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddSingleton<IClock, SystemClock>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
