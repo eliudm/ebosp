@@ -1,0 +1,23 @@
+name: ebosp
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: ebosp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ebosp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ebosp_dev_only}
+      POSTGRES_DB: ${POSTGRES_DB:-ebosp}
+    ports:
+      - "${POSTGRES_PORT:-5435}:5432"
+    volumes:
+      - ebosp-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ebosp} -d ${POSTGRES_DB:-ebosp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ebosp-postgres-data:
