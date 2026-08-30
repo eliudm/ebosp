@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EBOSP.Api/EBOSP.Api.csproj" />
+    <Project Path="src/EBOSP.Application/EBOSP.Application.csproj" />
+    <Project Path="src/EBOSP.Contracts/EBOSP.Contracts.csproj" />
+    <Project Path="src/EBOSP.Domain/EBOSP.Domain.csproj" />
+    <Project Path="src/EBOSP.Infrastructure/EBOSP.Infrastructure.csproj" />
+    <Project Path="src/EBOSP.Worker/EBOSP.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EBOSP.ApiTests/EBOSP.ApiTests.csproj" />
+    <Project Path="tests/EBOSP.E2ETests/EBOSP.E2ETests.csproj" />
+    <Project Path="tests/EBOSP.IntegrationTests/EBOSP.IntegrationTests.csproj" />
+    <Project Path="tests/EBOSP.UnitTests/EBOSP.UnitTests.csproj" />
+  </Folder>
+</Solution>
