@@ -43,7 +43,7 @@ Update this table at the end of every work session so the next session (or a fre
 | Milestone | Exit condition (dev guide §46) | Status |
 |---|---|---|
 | M0 Architecture approved | Architecture, domain boundaries and security principles documented | **Done** — this prep pass |
-| M1 Skeleton | Repo builds; API, React, DB, CI and local environment work | Not started |
+| M1 Skeleton | Repo builds; API, React, DB, CI and local environment work | In progress — solution/frontend build, tests pass, local Postgres via Docker verified end-to-end (migrations apply, API starts, `/health` returns 200). CI pipeline still blocked on GitHub token `workflow` scope. |
 | M2 Secure identity | Authentication, tenant isolation and authorization tested | Not started |
 | M3 Inventory complete | Ledger, balances, concurrency and alerts work | Not started |
 | M4 Procure-to-receive | Request → approval → PO → receipt works | Not started |
@@ -54,7 +54,9 @@ Update this table at the end of every work session so the next session (or a fre
 | M9 Production | Azure deployment, monitoring, backup/restore and release procedure verified | Not started |
 | M10 Handover | Documentation, runbooks, backlog and support ownership complete | Not started |
 
-**Current state:** repository scaffolded (folder structure, source specs, ADR-0001, docs placeholders). No application code yet. Next step is **Phase 1 — Foundation**: .NET solution + project files, React app scaffold, database chosen and provisioned locally (Docker), CI pipeline skeleton, configuration/secrets strategy. See dev guide §7 (environment setup) and §9 (foundation module) before writing any business feature.
+**Current state:** Phase 1 (Foundation) well underway. .NET solution (Api, Application, Domain, Infrastructure, Contracts, Worker + 4 test projects) builds and all tests pass; React/Vite frontend builds. PostgreSQL runs locally via Docker Compose (ADR-0002); EF Core migrations apply cleanly. Foundation module cross-cutting infrastructure (dev guide §9) is in place: global exception handling (ProblemDetails), correlation ID middleware, structured JSON logging, health checks, current-user/tenant context abstraction, clock abstraction, unit-of-work abstraction, pagination/sort conventions, authorization policy registration point, and a documented (not-yet-built, no consumer yet) idempotency convention. API versioning strategy recorded in ADR-0003. Verified end-to-end: `dotnet ef database update` + `dotnet run` + `GET /health` → 200.
+
+**Not yet done for Phase 1:** CI pipeline (blocked — GitHub token lacks the `workflow` OAuth scope; run `gh auth refresh -s workflow`), production Dockerfiles for Api/Worker, and the smoke-test checklist automation (dev guide §7 step 12). No business feature/domain code has been written — that starts with Identity in Phase 2, per the build order.
 
 ## Development discipline (non-negotiable, dev guide §1)
 
