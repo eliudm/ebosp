@@ -1,4 +1,5 @@
 using EBOSP.Api.Common;
+using EBOSP.Api.Middleware;
 using EBOSP.Application.Common;
 using EBOSP.Infrastructure.Common;
 using EBOSP.Infrastructure.Persistence;
@@ -30,6 +31,8 @@ builder.Services
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseMiddleware<CorrelationIdMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
