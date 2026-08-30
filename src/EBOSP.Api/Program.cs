@@ -7,6 +7,14 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Structured logging: JSON in every environment so logs are machine-parseable and consistent
+// between local, CI and Azure (dev guide §9). Scopes (correlation id, etc.) are included.
+builder.Logging.AddJsonConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.UseUtcTimestamp = true;
+});
+
 var connectionString = builder.Configuration.GetConnectionString("Default");
 if (string.IsNullOrWhiteSpace(connectionString))
 {
