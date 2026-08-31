@@ -6,10 +6,8 @@ builder.Services.AddHostedService<Worker>();
 
 builder.Services.AddHealthChecks();
 builder.Services.AddSingleton<IHealthCheckPublisher, HeartbeatHealthCheckPublisher>();
-builder.Services.Configure<HealthCheckPublisherOptions>(options =>
-{
-    options.Period = TimeSpan.FromSeconds(10);
-});
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddHostedService<HeartbeatBackgroundService>();
 
 var host = builder.Build();
 host.Run();

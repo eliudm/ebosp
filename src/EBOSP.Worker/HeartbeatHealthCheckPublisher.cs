@@ -4,7 +4,8 @@ namespace EBOSP.Worker;
 
 /// <summary>
 /// The worker has no HTTP endpoint to expose a /health route, so container health is checked via
-/// a heartbeat file instead: written on every healthy publish cycle, and the Docker HEALTHCHECK
+/// a heartbeat file instead: refreshed on every healthy check cycle by
+/// <see cref="HeartbeatBackgroundService"/>, and the Docker HEALTHCHECK
 /// (infra/docker/worker.Dockerfile) fails once the file goes stale (dev guide §30: add health
 /// checks; §29: track worker health).
 /// </summary>
