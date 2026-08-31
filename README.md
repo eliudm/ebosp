@@ -60,6 +60,10 @@ Production Dockerfiles for the API and Worker are done (`infra/docker/api.Docker
 
 CI pipeline (`.github/workflows/ci.yml`) is live and green, following the dev guide §31 gate sequence: backend (restore/format/build-with-analyzers/test+coverage/dependency scan) and frontend (lint/typecheck/build/audit) in parallel, then a secret scan (gitleaks), then container build + Trivy scan for both images, then a publish-artifacts gate that only runs if everything upstream passed. Runs on push/PR to `main`.
 
+Dev guide §7 step 12 (start API and frontend, smoke-test) is verified for both: API via `dotnet ef database update` + `dotnet run` + `GET /health` → 200 (above), frontend via `npm run dev` serving the app shell and transforming `main.tsx` cleanly with no runtime errors.
+
+Git workflow deliberately deviates from dev guide §6 (protected `main` + feature branches + PRs) for the current solo-development phase - see [ADR-0004](docs/decisions/0004-trunk-based-solo-workflow.md). `main` is unprotected; CI on every push is the actual quality gate.
+
 **Not yet done:** the smoke-test checklist automation (dev guide §7 step 12) and the CD pipeline (§32, Phase 13/Azure). No business feature/domain code has been written — that starts with Identity in Phase 2, per the build order.
 
 ## Development discipline (non-negotiable, dev guide §1)
