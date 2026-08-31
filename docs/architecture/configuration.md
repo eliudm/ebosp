@@ -26,7 +26,7 @@ Database, Identity, JWT/session, Storage, Messaging, Email/SMS providers, Paymen
 
 - Postgres connection: see `infra/docker/docker-compose.yml` and `infra/docker/.env.example` (ADR-0002).
 - Copy `infra/docker/.env.example` → `infra/docker/.env` for local Docker credentials.
-- Backend local secrets: to be documented once `EBOSP.Api` exists (Phase 1) — will use .NET user-secrets, not `appsettings.Development.json`, for anything sensitive.
+- Backend local secrets: both `EBOSP.Api` and `EBOSP.Worker` have a `UserSecretsId` - use `dotnet user-secrets set "Key" "value" --project src/EBOSP.Api` (or `src/EBOSP.Worker`) rather than editing `appsettings.Development.json`.
 - Frontend: `frontend/.env.local` (gitignored) for any local-only Vite env vars (`VITE_*`), once needed.
 
-Not yet started: actual `appsettings.json` schema, user-secrets setup, and Key Vault wiring — these land with `EBOSP.Api` in Phase 1.
+Not yet started: Key Vault wiring for staging/production - lands with Azure provisioning in Phase 13.
