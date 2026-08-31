@@ -21,6 +21,10 @@ RUN dotnet publish src/EBOSP.Worker/EBOSP.Worker.csproj -c Release --no-restore 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
+# Pull latest Alpine package patches (the base image tag can lag a few days behind the distro's
+# security fixes) so the container-scan gate isn't failing on CVEs already fixed upstream.
+RUN apk update && apk upgrade --no-cache
+
 # mcr.microsoft.com/dotnet/aspnet images ship a non-root "app" user (UID 64198) since .NET 8.
 USER app
 

@@ -21,6 +21,10 @@ RUN dotnet publish src/EBOSP.Api/EBOSP.Api.csproj -c Release --no-restore -o /ap
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
+# Pull latest Alpine package patches (the base image tag can lag a few days behind the distro's
+# security fixes) so the container-scan gate isn't failing on CVEs already fixed upstream.
+RUN apk update && apk upgrade --no-cache
+
 # Npgsql probes for GSSAPI (Kerberos) support at connect time; without krb5-libs it logs a
 # scary-looking (but harmless, since local/dev auth doesn't use Kerberos) load failure.
 RUN apk add --no-cache krb5-libs
