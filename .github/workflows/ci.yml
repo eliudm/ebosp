@@ -28,6 +28,10 @@ jobs:
           --health-retries 10
     env:
       ConnectionStrings__Default: "Host=localhost;Port=5432;Database=ebosp_test;Username=ebosp_test;Password=ebosp_test"
+      # CI-only signing key for the test suite - never used outside this job (dev guide §14).
+      Jwt__Issuer: "ebosp-ci"
+      Jwt__Audience: "ebosp-ci"
+      Jwt__SigningKey: "ci-only-signing-key-not-a-real-secret-please-do-not-reuse-1234567890"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
