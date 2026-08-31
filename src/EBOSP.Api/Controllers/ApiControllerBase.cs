@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EBOSP.Api.Controllers;
@@ -10,5 +11,6 @@ namespace EBOSP.Api.Controllers;
 /// validation (added with FluentValidation when the first such use case lands).
 /// </summary>
 [ApiController]
-[Route("api/v1/[controller]")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public abstract class ApiControllerBase : ControllerBase;

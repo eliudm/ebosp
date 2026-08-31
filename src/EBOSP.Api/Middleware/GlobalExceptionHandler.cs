@@ -1,3 +1,4 @@
+using EBOSP.Application.Common;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,6 +9,8 @@ namespace EBOSP.Api.Middleware;
 /// ProblemDetails response instead of leaking a stack trace (dev guide §9: global exception
 /// handling and standardized error responses). Never logs the exception message into the
 /// response body - only into the server-side log, correlated via <see cref="CorrelationIdMiddleware"/>.
+/// Known, expected exceptions (<see cref="EBOSP.Application.Common"/>) map to their specific
+/// status code and are logged at a lower level; anything else is an unexpected 500.
 /// </summary>
 public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
@@ -17,20 +20,33 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         CancellationToken cancellationToken)
     {
         var correlationId = httpContext.Items[CorrelationIdMiddleware.HeaderName] as string;
+        var (status, title) = Classify(exception);
 
-        logger.LogError(
-            exception,
-            "Unhandled exception for {Method} {Path} (correlation {CorrelationId})",
-            httpContext.Request.Method,
-            httpContext.Request.Path,
-            correlationId);
+        if (status == StatusCodes.Status500InternalServerError)
+        {
+            logger.LogError(
+                exception,
+                "Unhandled exception for {Method} {Path} (correlation {CorrelationId})",
+                httpContext.Request.Method,
+                httpContext.Request.Path,
+                correlationId);
+        }
+        else
+        {
+            logger.LogWarning(
+                "{Title} for {Method} {Path} (correlation {CorrelationId})",
+                title,
+                httpContext.Request.Method,
+                httpContext.Request.Path,
+                correlationId);
+        }
 
-        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        httpContext.Response.StatusCode = status;
 
         var problemDetails = new ProblemDetails
         {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "An unexpected error occurred.",
+            Status = status,
+            Title = title,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1",
             Instance = httpContext.Request.Path,
         };
@@ -43,4 +59,13 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
 
         return true;
     }
+
+    private static (int Status, string Title) Classify(Exception exception) => exception switch
+    {
+        AuthenticationFailedException => (StatusCodes.Status401Unauthorized, "Authentication failed."),
+        ForbiddenOperationException e => (StatusCodes.Status403Forbidden, e.Message),
+        NotFoundException e => (StatusCodes.Status404NotFound, e.Message),
+        ConflictException e => (StatusCodes.Status409Conflict, e.Message),
+        _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred."),
+    };
 }
