@@ -56,7 +56,9 @@ Update this table at the end of every work session so the next session (or a fre
 
 **Current state:** Phase 1 (Foundation) well underway. .NET solution (Api, Application, Domain, Infrastructure, Contracts, Worker + 4 test projects) builds and all tests pass; React/Vite frontend builds. PostgreSQL runs locally via Docker Compose (ADR-0002); EF Core migrations apply cleanly. Foundation module cross-cutting infrastructure (dev guide §9) is in place: global exception handling (ProblemDetails), correlation ID middleware, structured JSON logging, health checks, current-user/tenant context abstraction, clock abstraction, unit-of-work abstraction, pagination/sort conventions, authorization policy registration point, and a documented (not-yet-built, no consumer yet) idempotency convention. API versioning strategy recorded in ADR-0003. Verified end-to-end: `dotnet ef database update` + `dotnet run` + `GET /health` → 200.
 
-**Not yet done for Phase 1:** CI pipeline (blocked — GitHub token lacks the `workflow` OAuth scope; run `gh auth refresh -s workflow`), production Dockerfiles for Api/Worker, and the smoke-test checklist automation (dev guide §7 step 12). No business feature/domain code has been written — that starts with Identity in Phase 2, per the build order.
+Production Dockerfiles for the API and Worker are done (`infra/docker/api.Dockerfile`, `worker.Dockerfile`) — multi-stage, non-root, runtime-injected config, container health checks — and verified by building and running both images against the local Postgres container.
+
+**Not yet done for Phase 1:** CI pipeline (blocked — GitHub token lacks the `workflow` OAuth scope; run `gh auth refresh -s workflow`), and the smoke-test checklist automation (dev guide §7 step 12). No business feature/domain code has been written — that starts with Identity in Phase 2, per the build order.
 
 ## Development discipline (non-negotiable, dev guide §1)
 
