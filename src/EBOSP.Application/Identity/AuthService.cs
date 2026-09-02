@@ -17,11 +17,23 @@ public sealed class AuthService(
     IClock clock,
     JwtOptions jwtOptions) : IAuthService
 {
+    // A precomputed hash verified on every login failure path (dummy for a nonexistent user, real
+    // otherwise) so response time can't distinguish "no such account" from "wrong password" -
+    // without this, skipping the hasher entirely on the fast-fail paths is a timing side channel
+    // (PBKDF2 verification costs single-to-double-digit ms; a lookup miss costs microseconds).
+    // Static and lazily computed once per process - AuthService is scoped (one instance per
+    // request), but the dummy hash itself is fixed and expensive to compute, so it must not be
+    // recomputed on every login attempt.
+    private static string? _dummyPasswordHash;
+    private static readonly Lock DummyPasswordHashLock = new();
+
     public async Task<TokenResponse> LoginAsync(LoginRequest request, string? clientIp, CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var user = await users.FindByEmailIgnoringTenantAsync(normalizedEmail, cancellationToken);
+
+        var verification = passwordHasher.Verify(user?.PasswordHash ?? GetDummyPasswordHash(), request.Password);
 
         // Same failure for "no such account" and "wrong password" - spec §11: no account enumeration.
         if (user is null)
@@ -41,7 +53,6 @@ public sealed class AuthService(
             throw new AuthenticationFailedException();
         }
 
-        var verification = passwordHasher.Verify(user.PasswordHash, request.Password);
         if (verification == PasswordVerificationResult.Failed)
         {
             user.RecordFailedLogin(now);
@@ -78,7 +89,24 @@ public sealed class AuthService(
         var tokenHash = SecureTokenGenerator.Hash(request.RefreshToken);
         var stored = await refreshTokens.FindByHashIgnoringTenantAsync(tokenHash, cancellationToken);
 
-        if (stored is null || !stored.IsActive(now))
+        if (stored is null)
+        {
+            throw new AuthenticationFailedException();
+        }
+
+        if (stored.RevokedAt is not null)
+        {
+            // A revoked (already-rotated or explicitly logged-out) token being presented again is
+            // a strong signal of theft/reuse, not just an expired session - kill every active
+            // session for this user, not just deny this one request (spec §11: "session/token
+            // revocation for suspicious or administrative actions").
+            await refreshTokens.RevokeAllActiveForUserAsync(stored.UserId, now, cancellationToken);
+            events.Record("RefreshTokenReuseDetected", stored.TenantId, nameof(User), stored.UserId.ToString(), new { }, actorId: stored.UserId);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            throw new AuthenticationFailedException();
+        }
+
+        if (!stored.IsActive(now))
         {
             throw new AuthenticationFailedException();
         }
@@ -133,6 +161,19 @@ public sealed class AuthService(
         revokedPredecessor?.Revoke(now, refreshToken.Id);
 
         return new TokenResponse(access.Value, refreshTokenValue, access.ExpiresAt);
+    }
+
+    private string GetDummyPasswordHash()
+    {
+        if (_dummyPasswordHash is not null)
+        {
+            return _dummyPasswordHash;
+        }
+
+        lock (DummyPasswordHashLock)
+        {
+            return _dummyPasswordHash ??= passwordHasher.Hash("timing-normalization-dummy-password-do-not-use");
+        }
     }
 
     private async Task RecordLoginFailedAsync(User user, string reason, CancellationToken cancellationToken)
