@@ -2,6 +2,7 @@ using EBOSP.Application.Identity;
 using EBOSP.Contracts.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace EBOSP.Api.Controllers;
 
@@ -10,6 +11,7 @@ public sealed class TenantsController(ITenantService tenantService) : ApiControl
 {
     [HttpPost]
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimiterPolicies.TenantCreation)]
     public async Task<ActionResult<TenantResponse>> Create(CreateTenantRequest request, CancellationToken cancellationToken)
     {
         var result = await tenantService.CreateTenantAsync(request, cancellationToken);

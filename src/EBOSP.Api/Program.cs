@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using EBOSP.Api;
 using EBOSP.Api.Authorization;
 using EBOSP.Api.Common;
@@ -113,22 +114,34 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 builder.Services.AddAuthorization();
 
+// Spec §14: "Apply rate limiting to authentication and sensitive endpoints." Partitioned per
+// client IP - AddFixedWindowLimiter's simple overload creates a single *global* window shared by
+// every caller, which would let one burst of legitimate traffic lock out every other user (or let
+// one attacker trivially deny login to the whole platform), so each policy is registered via
+// AddPolicy with an explicit per-IP partition key instead.
 builder.Services.AddRateLimiter(options =>
 {
-    // Spec §14: "Apply rate limiting to authentication and sensitive endpoints."
-    options.AddFixedWindowLimiter(RateLimiterPolicies.Login, limiterOptions =>
-    {
-        limiterOptions.PermitLimit = 20;
-        limiterOptions.Window = TimeSpan.FromMinutes(1);
-        limiterOptions.QueueLimit = 0;
-    });
-    options.AddFixedWindowLimiter(RateLimiterPolicies.PasswordReset, limiterOptions =>
-    {
-        limiterOptions.PermitLimit = 10;
-        limiterOptions.Window = TimeSpan.FromMinutes(1);
-        limiterOptions.QueueLimit = 0;
-    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    // Permit limits are configurable (RateLimiting:<Policy>:PermitLimit) rather than hardcoded so
+    // tests can raise them for functional suites unrelated to rate limiting, without fighting
+    // RateLimiterOptions.AddPolicy's "policy already registered" guard from a second registration.
+    AddPerIpFixedWindowPolicy(options, builder.Configuration, RateLimiterPolicies.Login, defaultPermitLimit: 20);
+    AddPerIpFixedWindowPolicy(options, builder.Configuration, RateLimiterPolicies.PasswordReset, defaultPermitLimit: 10);
+    AddPerIpFixedWindowPolicy(options, builder.Configuration, RateLimiterPolicies.TenantCreation, defaultPermitLimit: 5);
 });
+
+static void AddPerIpFixedWindowPolicy(RateLimiterOptions options, IConfiguration configuration, string policyName, int defaultPermitLimit)
+{
+    var permitLimit = configuration.GetValue($"RateLimiting:{policyName}:PermitLimit", defaultPermitLimit);
+    options.AddPolicy(policyName, httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+        }));
+}
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasherAdapter>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -159,6 +172,21 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+else
+{
+    // HTTP Strict Transport Security - skipped in dev since the local http profile has no cert.
+    app.UseHsts();
+}
+
+// Baseline security headers (spec §14 is HTTPS/authz/input-validation-focused; these are the
+// standard, low-risk defense-in-depth headers beyond what it enumerates explicitly).
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("Referrer-Policy", "no-referrer");
+    await next();
+});
 
 app.UseHttpsRedirection();
 
