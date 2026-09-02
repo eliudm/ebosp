@@ -21,6 +21,22 @@ public class AuthFlowTests(CustomWebApplicationFactory factory) : IClassFixture<
     }
 
     [Fact]
+    public async Task CreateTenant_WithAlreadyRegisteredEmail_Returns409()
+    {
+        var client = factory.CreateClient();
+        var admin = await AuthTestHelpers.CreateTenantAdminAsync(client);
+
+        var duplicateResponse = await client.PostAsJsonAsync("/api/v1/tenants", new CreateTenantRequest
+        {
+            TenantName = "Another Org " + Guid.NewGuid(),
+            AdminEmail = admin.AdminEmail,
+            AdminPassword = "SomeOtherPassword123!",
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, duplicateResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task TenantAdmin_CanCreateUser_AssignRole_AndThatUserCanLoginAfterActivation()
     {
         var client = factory.CreateClient();
@@ -56,6 +72,26 @@ public class AuthFlowTests(CustomWebApplicationFactory factory) : IClassFixture<
 
         var reuseResponse = await client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshTokenRequest { RefreshToken = admin.Tokens.RefreshToken });
         Assert.Equal(HttpStatusCode.Unauthorized, reuseResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_ReusedRevokedToken_RevokesWholeSessionFamily()
+    {
+        // A revoked refresh token being presented again is treated as evidence of theft: every
+        // active session for that user is killed, not just this one request denied.
+        var client = factory.CreateClient();
+        var admin = await AuthTestHelpers.CreateTenantAdminAsync(client);
+
+        var rotateResponse = await client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshTokenRequest { RefreshToken = admin.Tokens.RefreshToken });
+        var rotatedTokens = (await rotateResponse.Content.ReadFromJsonAsync<TokenResponse>())!;
+
+        // Reuse the now-revoked original token - simulates an attacker replaying a stolen token.
+        var reuseResponse = await client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshTokenRequest { RefreshToken = admin.Tokens.RefreshToken });
+        Assert.Equal(HttpStatusCode.Unauthorized, reuseResponse.StatusCode);
+
+        // The legitimately-rotated token must now be dead too, even though it was never reused.
+        var legitimateRetryResponse = await client.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshTokenRequest { RefreshToken = rotatedTokens.RefreshToken });
+        Assert.Equal(HttpStatusCode.Unauthorized, legitimateRetryResponse.StatusCode);
     }
 
     [Fact]
