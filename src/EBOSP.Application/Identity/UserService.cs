@@ -18,7 +18,11 @@ public sealed class UserService(
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         if (await users.EmailExistsAsync(normalizedEmail, cancellationToken))
         {
-            throw new ConflictException("A user with this email already exists.");
+            // Fully generic, unlike TenantService's version: a tenant-admin has no legitimate need
+            // to learn that this email specifically belongs to a user of a *different* tenant -
+            // that would leak another tenant's data across the isolation boundary (spec §12:
+            // "tenant isolation is a security boundary, not merely a UI filter").
+            throw new ConflictException("Unable to create this user.");
         }
 
         var passwordHash = passwordHasher.Hash(request.Password);
