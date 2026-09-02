@@ -12,4 +12,17 @@ public sealed class RefreshTokenRepository(AppDbContext context) : IRefreshToken
 
     public Task<RefreshToken?> FindByHashIgnoringTenantAsync(string tokenHash, CancellationToken cancellationToken) =>
         context.RefreshTokens.IgnoreQueryFilters().SingleOrDefaultAsync(t => t.TokenHash == tokenHash, cancellationToken);
+
+    public async Task RevokeAllActiveForUserAsync(Guid userId, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var active = await context.RefreshTokens
+            .IgnoreQueryFilters()
+            .Where(t => t.UserId == userId && t.RevokedAt == null && t.ExpiresAt > now)
+            .ToListAsync(cancellationToken);
+
+        foreach (var token in active)
+        {
+            token.Revoke(now);
+        }
+    }
 }

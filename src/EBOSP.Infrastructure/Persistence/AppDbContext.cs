@@ -38,6 +38,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -120,6 +122,15 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
         modelBuilder.Entity<RefreshToken>(entity =>
         {
             entity.ToTable("refresh_tokens");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TokenHash).HasMaxLength(64).IsRequired();
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.HasIndex(e => e.TenantId);
+        });
+
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.ToTable("password_reset_tokens");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.TokenHash).HasMaxLength(64).IsRequired();
             entity.HasIndex(e => e.TokenHash).IsUnique();
