@@ -1,3 +1,4 @@
+using EBOSP.Application.Identity;
 using EBOSP.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -14,6 +15,13 @@ namespace EBOSP.ApiTests;
 /// </summary>
 public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    /// <summary>
+    /// Replaces the real (log-only) password reset notifier so tests can retrieve the cleartext
+    /// token that would otherwise only ever reach the user - there is no email channel to
+    /// intercept yet (dev guide §17 is a later milestone).
+    /// </summary>
+    public CapturingPasswordResetNotifier PasswordResetNotifier { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureAppConfiguration((_, config) =>
@@ -27,6 +35,8 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 ["Jwt:SigningKey"] = "api-tests-signing-key-not-a-real-secret-do-not-reuse-1234567890",
             });
         });
+
+        builder.ConfigureServices(services => services.AddSingleton<IPasswordResetNotifier>(PasswordResetNotifier));
     }
 
     public async Task InitializeAsync()
