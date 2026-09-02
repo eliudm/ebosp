@@ -3,10 +3,11 @@ using System.Security.Cryptography;
 namespace EBOSP.Application.Identity;
 
 /// <summary>
-/// Generates the opaque refresh token handed to the client and the hash stored server-side
-/// (spec §11: revocable refresh/session handling) - only the hash is ever persisted.
+/// Generates an opaque, single-use token handed to the client and the hash stored server-side
+/// (spec §11: revocable refresh/session handling; password reset) - only the hash is ever
+/// persisted. Shared by refresh tokens and password reset tokens.
 /// </summary>
-public static class RefreshTokenGenerator
+public static class SecureTokenGenerator
 {
     public static string GenerateToken() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 

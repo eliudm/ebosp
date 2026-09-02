@@ -11,6 +11,7 @@ public sealed class AuthService(
     IRefreshTokenRepository refreshTokens,
     IPasswordHasher passwordHasher,
     IJwtTokenService jwtTokenService,
+    IMfaChallengeProvider mfaChallengeProvider,
     IDomainEventRecorder events,
     IUnitOfWork unitOfWork,
     IClock clock,
@@ -53,6 +54,14 @@ public sealed class AuthService(
             user.ChangePasswordHash(passwordHasher.Hash(request.Password));
         }
 
+        // MFA-ready seam (spec §11: "Add MFA-ready architecture"; §11.1 step 4: "MFA challenge is
+        // performed when required"). NoOpMfaChallengeProvider never requires one today - a real
+        // provider slots in here without AuthService changing when an org enables MFA.
+        if (await mfaChallengeProvider.IsChallengeRequiredAsync(user, cancellationToken))
+        {
+            throw new MfaChallengeRequiredException();
+        }
+
         user.RecordSuccessfulLogin();
 
         var response = await IssueTokenPairAsync(user, now, clientIp, cancellationToken);
@@ -66,7 +75,7 @@ public sealed class AuthService(
     public async Task<TokenResponse> RefreshAsync(RefreshTokenRequest request, string? clientIp, CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
-        var tokenHash = RefreshTokenGenerator.Hash(request.RefreshToken);
+        var tokenHash = SecureTokenGenerator.Hash(request.RefreshToken);
         var stored = await refreshTokens.FindByHashIgnoringTenantAsync(tokenHash, cancellationToken);
 
         if (stored is null || !stored.IsActive(now))
@@ -88,7 +97,7 @@ public sealed class AuthService(
 
     public async Task LogoutAsync(RefreshTokenRequest request, CancellationToken cancellationToken)
     {
-        var tokenHash = RefreshTokenGenerator.Hash(request.RefreshToken);
+        var tokenHash = SecureTokenGenerator.Hash(request.RefreshToken);
         var stored = await refreshTokens.FindByHashIgnoringTenantAsync(tokenHash, cancellationToken);
 
         if (stored is null || !stored.IsActive(clock.UtcNow))
@@ -111,11 +120,11 @@ public sealed class AuthService(
         var permissionCodes = await roles.GetPermissionCodesAsync(user.TenantId, user.Id, cancellationToken);
         var access = jwtTokenService.IssueAccessToken(user.Id, user.TenantId, permissionCodes);
 
-        var refreshTokenValue = RefreshTokenGenerator.GenerateToken();
+        var refreshTokenValue = SecureTokenGenerator.GenerateToken();
         var refreshToken = RefreshToken.Issue(
             user.TenantId,
             user.Id,
-            RefreshTokenGenerator.Hash(refreshTokenValue),
+            SecureTokenGenerator.Hash(refreshTokenValue),
             now,
             now.AddDays(jwtOptions.RefreshTokenLifetimeDays),
             clientIp);

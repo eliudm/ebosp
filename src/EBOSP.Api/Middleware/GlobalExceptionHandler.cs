@@ -63,6 +63,7 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
     private static (int Status, string Title) Classify(Exception exception) => exception switch
     {
         AuthenticationFailedException => (StatusCodes.Status401Unauthorized, "Authentication failed."),
+        MfaChallengeRequiredException => (StatusCodes.Status401Unauthorized, "MFA challenge required."),
         ForbiddenOperationException e => (StatusCodes.Status403Forbidden, e.Message),
         NotFoundException e => (StatusCodes.Status404NotFound, e.Message),
         ConflictException e => (StatusCodes.Status409Conflict, e.Message),

@@ -12,3 +12,5 @@ public sealed class ForbiddenOperationException(string message) : Exception(mess
 public sealed class NotFoundException(string message) : Exception(message);
 
 public sealed class ConflictException(string message) : Exception(message);
+
+public sealed class MfaChallengeRequiredException() : Exception("MFA challenge required.");
