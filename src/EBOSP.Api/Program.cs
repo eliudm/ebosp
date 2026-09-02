@@ -44,6 +44,16 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+// The React frontend (frontend/) runs on a different origin in dev; configurable per environment
+// since the deployed frontend origin differs from the local Vite dev server.
+const string FrontendCorsPolicy = "frontend";
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? ["http://localhost:5173", "http://localhost:5174"]; // Vite auto-increments the port if 5173 is taken.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(FrontendCorsPolicy, policy => policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod());
+});
+
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
@@ -151,6 +161,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors(FrontendCorsPolicy);
 
 app.UseRateLimiter();
 
