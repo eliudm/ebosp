@@ -39,7 +39,7 @@ public sealed class StockBalance : Entity, ITenantOwned
     public void Receive(int quantity)
     {
         RequirePositive(quantity);
-        QuantityOnHand += quantity;
+        QuantityOnHand = AddChecked(QuantityOnHand, quantity);
     }
 
     /// <summary>Negative stock is hard-blocked (spec §8.2/dev guide §13.2's "explicit/configurable policy" - this is the policy).</summary>
@@ -62,7 +62,7 @@ public sealed class StockBalance : Entity, ITenantOwned
             throw new InvalidOperationException("Insufficient available stock.");
         }
 
-        QuantityReserved += quantity;
+        QuantityReserved = AddChecked(QuantityReserved, quantity);
     }
 
     public void Release(int quantity)
@@ -83,12 +83,13 @@ public sealed class StockBalance : Entity, ITenantOwned
             throw new ArgumentOutOfRangeException(nameof(delta), "Adjustment delta cannot be zero.");
         }
 
-        if (QuantityOnHand + delta < 0)
+        var result = AddChecked(QuantityOnHand, delta);
+        if (result < 0)
         {
             throw new InvalidOperationException("Adjustment would result in negative stock.");
         }
 
-        QuantityOnHand += delta;
+        QuantityOnHand = result;
     }
 
     private static void RequirePositive(int quantity)
@@ -97,5 +98,21 @@ public sealed class StockBalance : Entity, ITenantOwned
         {
             throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be positive.");
         }
+    }
+
+    /// <summary>
+    /// Plain int += / -= would silently wrap on overflow (the project builds unchecked) - a
+    /// single oversized receive followed by any further receive could otherwise corrupt
+    /// QuantityOnHand into a large negative number with no exception raised at all.
+    /// </summary>
+    private static int AddChecked(int a, int b)
+    {
+        var result = (long)a + b;
+        if (result is > int.MaxValue or < int.MinValue)
+        {
+            throw new InvalidOperationException("This operation would overflow the stock balance.");
+        }
+
+        return (int)result;
     }
 }

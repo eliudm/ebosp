@@ -121,4 +121,24 @@ public class StockBalanceTests
         Assert.Throws<ArgumentOutOfRangeException>(() => balance.Issue(0));
         Assert.Throws<ArgumentOutOfRangeException>(() => balance.Issue(-1));
     }
+
+    [Fact]
+    public void Receive_ThenReceiveAgain_OverflowingOnHand_ThrowsWithoutCorruptingBalance()
+    {
+        var balance = NewBalance();
+        balance.Receive(int.MaxValue);
+
+        Assert.Throws<InvalidOperationException>(() => balance.Receive(1));
+        Assert.Equal(int.MaxValue, balance.QuantityOnHand);
+    }
+
+    [Fact]
+    public void AdjustBy_OverflowingOnHand_ThrowsWithoutCorruptingBalance()
+    {
+        var balance = NewBalance();
+        balance.Receive(int.MaxValue - 1);
+
+        Assert.Throws<InvalidOperationException>(() => balance.AdjustBy(10));
+        Assert.Equal(int.MaxValue - 1, balance.QuantityOnHand);
+    }
 }
