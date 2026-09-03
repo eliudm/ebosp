@@ -68,6 +68,11 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         NotFoundException e => (StatusCodes.Status404NotFound, e.Message),
         ConflictException e => (StatusCodes.Status409Conflict, e.Message),
         ConcurrencyConflictException => (StatusCodes.Status409Conflict, "The record was modified concurrently. Please retry."),
+        // Domain entity factory/mutation methods validate their own invariants with
+        // Argument(OutOfRange)Exception (e.g. "Adjustment delta cannot be zero.") - these are
+        // deliberately client-safe messages, same as the typed exceptions above, not internal
+        // detail; without this case one could reach here past DTO-level validation and 500.
+        ArgumentException e => (StatusCodes.Status400BadRequest, e.Message),
         _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred."),
     };
 }

@@ -212,6 +212,47 @@ public class InventoryAcceptanceTests(CustomWebApplicationFactory factory) : ICl
     }
 
     [Fact]
+    public async Task Adjust_MinIntDelta_Returns400NotServerError()
+    {
+        // int.MinValue has no positive two's-complement counterpart - Math.Abs(int.MinValue)
+        // throws OverflowException, which the request must never reach in the first place.
+        var client = factory.CreateClient();
+        var admin = await AuthTestHelpers.CreateTenantAdminAsync(client);
+        AuthTestHelpers.AuthorizeAs(client, admin.Tokens);
+        var (warehouseId, productId) = await InventoryTestHelpers.CreateWarehouseAndProductAsync(client);
+
+        var response = await client.PostAsJsonAsync("/api/v1/inventory/adjustments", new AdjustStockRequest
+        {
+            WarehouseId = warehouseId,
+            ProductId = productId,
+            QuantityDelta = int.MinValue,
+            Reason = "Boundary check",
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Adjust_ZeroDelta_Returns400NotServerError()
+    {
+        var client = factory.CreateClient();
+        var admin = await AuthTestHelpers.CreateTenantAdminAsync(client);
+        AuthTestHelpers.AuthorizeAs(client, admin.Tokens);
+        var (warehouseId, productId) = await InventoryTestHelpers.CreateWarehouseAndProductAsync(client);
+        await ReceiveAsync(client, warehouseId, productId, 10);
+
+        var response = await client.PostAsJsonAsync("/api/v1/inventory/adjustments", new AdjustStockRequest
+        {
+            WarehouseId = warehouseId,
+            ProductId = productId,
+            QuantityDelta = 0,
+            Reason = "Boundary check",
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Transfer_WithAnotherTenantsWarehouse_Returns404()
     {
         var client = factory.CreateClient();

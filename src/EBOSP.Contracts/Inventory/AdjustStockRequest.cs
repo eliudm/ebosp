@@ -10,7 +10,12 @@ public sealed class AdjustStockRequest
     [Required]
     public required Guid ProductId { get; init; }
 
-    /// <summary>Positive to increase, negative to decrease; cannot be zero.</summary>
+    /// <summary>
+    /// Positive to increase, negative to decrease; cannot be zero. Excludes int.MinValue - the
+    /// controller's threshold check calls Math.Abs(QuantityDelta), which throws OverflowException
+    /// for that one value since it has no positive two's-complement counterpart.
+    /// </summary>
+    [Range(-2147483647, int.MaxValue)]
     public required int QuantityDelta { get; init; }
 
     [Required]
