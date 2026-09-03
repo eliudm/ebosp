@@ -8,6 +8,7 @@ public static class PermissionCodes
     public const string InventoryAdjustLarge = "inventory.adjust.large";
     public const string ProcurementCreate = "procurement.create";
     public const string ProcurementApprove = "procurement.approve";
+    public const string ProcurementApproveLarge = "procurement.approve.large";
     public const string PaymentCreate = "payment.create";
     public const string SecurityAlertManage = "security.alert.manage";
     public const string AuditRead = "audit.read";
@@ -21,6 +22,7 @@ public static class PermissionCodes
         InventoryAdjustLarge,
         ProcurementCreate,
         ProcurementApprove,
+        ProcurementApproveLarge,
         PaymentCreate,
         SecurityAlertManage,
         AuditRead,
