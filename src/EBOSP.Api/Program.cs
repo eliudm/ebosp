@@ -7,8 +7,10 @@ using EBOSP.Api.Middleware;
 using EBOSP.Application.Authorization;
 using EBOSP.Application.Common;
 using EBOSP.Application.Identity;
+using EBOSP.Application.MasterData;
 using EBOSP.Infrastructure.Common;
 using EBOSP.Infrastructure.Identity;
+using EBOSP.Infrastructure.MasterData;
 using EBOSP.Infrastructure.Outbox;
 using EBOSP.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -157,6 +159,15 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
+
+builder.Services.AddScoped<IBranchRepository, BranchRepository>();
+builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
+builder.Services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IBranchService, BranchService>();
+builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+builder.Services.AddScoped<IProductCategoryService, ProductCategoryService>();
+builder.Services.AddScoped<IProductService, ProductService>();
 
 builder.Services
     .AddHealthChecks()
