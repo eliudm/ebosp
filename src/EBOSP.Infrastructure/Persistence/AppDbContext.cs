@@ -46,6 +46,22 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
 
     public DbSet<Product> Products => Set<Product>();
 
+    public DbSet<StockBalance> StockBalances => Set<StockBalance>();
+
+    public DbSet<StockLedgerEntry> StockLedgerEntries => Set<StockLedgerEntry>();
+
+    public DbSet<GoodsReceipt> GoodsReceipts => Set<GoodsReceipt>();
+
+    public DbSet<GoodsReceiptLine> GoodsReceiptLines => Set<GoodsReceiptLine>();
+
+    public DbSet<StockAdjustment> StockAdjustments => Set<StockAdjustment>();
+
+    public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
+
+    public DbSet<StockReservation> StockReservations => Set<StockReservation>();
+
+    public DbSet<ReorderRule> ReorderRules => Set<ReorderRule>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -176,6 +192,103 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             entity.HasOne<ProductCategory>().WithMany().HasForeignKey(e => e.CategoryId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<StockBalance>(entity =>
+        {
+            entity.ToTable("stock_balances");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.WarehouseId, e.ProductId }).IsUnique();
+            entity.HasOne<Warehouse>().WithMany().HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Product>().WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
+            // Postgres system column, not a mapped CLR property - dev guide §13.4: "concurrent
+            // issue operations cannot corrupt balance".
+            entity.Property<uint>("xmin")
+                .HasColumnName("xmin")
+                .HasColumnType("xid")
+                .ValueGeneratedOnAddOrUpdate()
+                .IsRowVersion();
+        });
+
+        modelBuilder.Entity<StockLedgerEntry>(entity =>
+        {
+            entity.ToTable("stock_ledger_entries");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EventType).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.Property(e => e.ReferenceType).HasMaxLength(100);
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.IdempotencyKey).HasMaxLength(100);
+            entity.HasIndex(e => new { e.TenantId, e.WarehouseId, e.ProductId });
+            entity.HasIndex(e => new { e.TenantId, e.IdempotencyKey }).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
+            entity.HasOne<Warehouse>().WithMany().HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Product>().WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<GoodsReceipt>(entity =>
+        {
+            entity.ToTable("goods_receipts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Reference).HasMaxLength(200);
+            entity.Property(e => e.IdempotencyKey).HasMaxLength(100);
+            entity.HasIndex(e => e.TenantId);
+            entity.HasIndex(e => new { e.TenantId, e.IdempotencyKey }).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
+            entity.HasOne<Warehouse>().WithMany().HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(e => e.Lines)
+                .WithOne()
+                .HasForeignKey(l => l.GoodsReceiptId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<GoodsReceiptLine>(entity =>
+        {
+            entity.ToTable("goods_receipt_lines");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.TenantId);
+            entity.HasOne<Product>().WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockAdjustment>(entity =>
+        {
+            entity.ToTable("stock_adjustments");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Reason).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.IdempotencyKey).HasMaxLength(100);
+            entity.HasIndex(e => e.TenantId);
+            entity.HasIndex(e => new { e.TenantId, e.IdempotencyKey }).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
+            entity.HasOne<Warehouse>().WithMany().HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Product>().WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockTransfer>(entity =>
+        {
+            entity.ToTable("stock_transfers");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.IdempotencyKey).HasMaxLength(100);
+            entity.HasIndex(e => e.TenantId);
+            entity.HasIndex(e => new { e.TenantId, e.IdempotencyKey }).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
+            entity.HasOne<Warehouse>().WithMany().HasForeignKey(e => e.FromWarehouseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Warehouse>().WithMany().HasForeignKey(e => e.ToWarehouseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Product>().WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockReservation>(entity =>
+        {
+            entity.ToTable("stock_reservations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.HasIndex(e => e.TenantId);
+            entity.HasOne<Warehouse>().WithMany().HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Product>().WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ReorderRule>(entity =>
+        {
+            entity.ToTable("reorder_rules");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.TenantId, e.WarehouseId, e.ProductId }).IsUnique();
+            entity.HasOne<Warehouse>().WithMany().HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Product>().WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         // Tenant isolation is enforced here, not left to each query author (spec §12).
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
@@ -190,5 +303,18 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
         where TEntity : class, ITenantOwned
     {
         modelBuilder.Entity<TEntity>().HasQueryFilter(e => e.TenantId == currentUserContext.TenantId);
+    }
+
+    /// <summary>Translates EF Core's own exception so the Application layer never depends on it directly (dev guide §13.4: "concurrent issue operations cannot corrupt balance").</summary>
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConcurrencyConflictException(ex);
+        }
     }
 }
