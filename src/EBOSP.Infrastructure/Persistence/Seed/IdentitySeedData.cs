@@ -21,6 +21,7 @@ internal static class IdentitySeedData
         [PermissionCodes.UserManage] = Guid.Parse("11111111-1111-1111-1111-111111111108"),
         [PermissionCodes.MasterDataManage] = Guid.Parse("11111111-1111-1111-1111-111111111109"),
         [PermissionCodes.InventoryAdjustLarge] = Guid.Parse("11111111-1111-1111-1111-111111111110"),
+        [PermissionCodes.ProcurementApproveLarge] = Guid.Parse("11111111-1111-1111-1111-111111111111"),
     };
 
     private static readonly Dictionary<string, Guid> RoleIds = new()
@@ -46,6 +47,7 @@ internal static class IdentitySeedData
         Permission.Create(PermissionIds[PermissionCodes.UserManage], PermissionCodes.UserManage, "Manage users, roles and tenant administration."),
         Permission.Create(PermissionIds[PermissionCodes.MasterDataManage], PermissionCodes.MasterDataManage, "Manage branches, warehouses, product categories and products."),
         Permission.Create(PermissionIds[PermissionCodes.InventoryAdjustLarge], PermissionCodes.InventoryAdjustLarge, "Perform stock adjustments above the large-adjustment threshold."),
+        Permission.Create(PermissionIds[PermissionCodes.ProcurementApproveLarge], PermissionCodes.ProcurementApproveLarge, "Approve purchase requests above the high-value threshold."),
     ];
 
     public static readonly Role[] Roles =
@@ -67,6 +69,7 @@ internal static class IdentitySeedData
         RolePermission.Create(RoleIds[RoleCodes.Procurement], PermissionIds[PermissionCodes.ProcurementCreate]),
         RolePermission.Create(RoleIds[RoleCodes.Manager], PermissionIds[PermissionCodes.ProcurementApprove]),
         RolePermission.Create(RoleIds[RoleCodes.Finance], PermissionIds[PermissionCodes.PaymentCreate]),
+        RolePermission.Create(RoleIds[RoleCodes.Finance], PermissionIds[PermissionCodes.ProcurementApproveLarge]),
         RolePermission.Create(RoleIds[RoleCodes.SecurityOfficer], PermissionIds[PermissionCodes.SecurityAlertManage]),
         RolePermission.Create(RoleIds[RoleCodes.Auditor], PermissionIds[PermissionCodes.AuditRead]),
     ];
