@@ -11,6 +11,7 @@ public static class PermissionCodes
     public const string SecurityAlertManage = "security.alert.manage";
     public const string AuditRead = "audit.read";
     public const string UserManage = "user.manage";
+    public const string MasterDataManage = "master-data.manage";
 
     public static readonly IReadOnlyList<string> All =
     [
@@ -22,5 +23,6 @@ public static class PermissionCodes
         SecurityAlertManage,
         AuditRead,
         UserManage,
+        MasterDataManage,
     ];
 }

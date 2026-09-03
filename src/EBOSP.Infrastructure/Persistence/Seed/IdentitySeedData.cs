@@ -19,6 +19,7 @@ internal static class IdentitySeedData
         [PermissionCodes.SecurityAlertManage] = Guid.Parse("11111111-1111-1111-1111-111111111106"),
         [PermissionCodes.AuditRead] = Guid.Parse("11111111-1111-1111-1111-111111111107"),
         [PermissionCodes.UserManage] = Guid.Parse("11111111-1111-1111-1111-111111111108"),
+        [PermissionCodes.MasterDataManage] = Guid.Parse("11111111-1111-1111-1111-111111111109"),
     };
 
     private static readonly Dictionary<string, Guid> RoleIds = new()
@@ -42,6 +43,7 @@ internal static class IdentitySeedData
         Permission.Create(PermissionIds[PermissionCodes.SecurityAlertManage], PermissionCodes.SecurityAlertManage, "Manage security alerts."),
         Permission.Create(PermissionIds[PermissionCodes.AuditRead], PermissionCodes.AuditRead, "Read audit events."),
         Permission.Create(PermissionIds[PermissionCodes.UserManage], PermissionCodes.UserManage, "Manage users, roles and tenant administration."),
+        Permission.Create(PermissionIds[PermissionCodes.MasterDataManage], PermissionCodes.MasterDataManage, "Manage branches, warehouses, product categories and products."),
     ];
 
     public static readonly Role[] Roles =
