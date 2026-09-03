@@ -7,9 +7,11 @@ using EBOSP.Api.Middleware;
 using EBOSP.Application.Authorization;
 using EBOSP.Application.Common;
 using EBOSP.Application.Identity;
+using EBOSP.Application.Inventory;
 using EBOSP.Application.MasterData;
 using EBOSP.Infrastructure.Common;
 using EBOSP.Infrastructure.Identity;
+using EBOSP.Infrastructure.Inventory;
 using EBOSP.Infrastructure.MasterData;
 using EBOSP.Infrastructure.Outbox;
 using EBOSP.Infrastructure.Persistence;
@@ -168,6 +170,21 @@ builder.Services.AddScoped<IBranchService, BranchService>();
 builder.Services.AddScoped<IWarehouseService, WarehouseService>();
 builder.Services.AddScoped<IProductCategoryService, ProductCategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+
+var inventoryOptions = new InventoryOptions
+{
+    LargeAdjustmentThreshold = builder.Configuration.GetValue($"{InventoryOptions.SectionName}:LargeAdjustmentThreshold", 100),
+};
+builder.Services.AddSingleton(inventoryOptions);
+builder.Services.AddScoped<IStockBalanceRepository, StockBalanceRepository>();
+builder.Services.AddScoped<IStockLedgerEntryRepository, StockLedgerEntryRepository>();
+builder.Services.AddScoped<IGoodsReceiptRepository, GoodsReceiptRepository>();
+builder.Services.AddScoped<IStockAdjustmentRepository, StockAdjustmentRepository>();
+builder.Services.AddScoped<IStockTransferRepository, StockTransferRepository>();
+builder.Services.AddScoped<IStockReservationRepository, StockReservationRepository>();
+builder.Services.AddScoped<IReorderRuleRepository, ReorderRuleRepository>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IReorderRuleService, ReorderRuleService>();
 
 builder.Services
     .AddHealthChecks()

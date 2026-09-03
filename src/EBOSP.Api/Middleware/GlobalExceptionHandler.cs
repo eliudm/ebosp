@@ -67,6 +67,7 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         ForbiddenOperationException e => (StatusCodes.Status403Forbidden, e.Message),
         NotFoundException e => (StatusCodes.Status404NotFound, e.Message),
         ConflictException e => (StatusCodes.Status409Conflict, e.Message),
+        ConcurrencyConflictException => (StatusCodes.Status409Conflict, "The record was modified concurrently. Please retry."),
         _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred."),
     };
 }
