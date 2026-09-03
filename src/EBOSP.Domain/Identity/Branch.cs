@@ -8,10 +8,7 @@ public enum BranchStatus
     Inactive,
 }
 
-/// <summary>
-/// Minimal branch shell for role/user scoping in Phase 2. Warehouses, products and the rest of
-/// master data (dev guide §12) are built out in Phase 3 - this is not that module.
-/// </summary>
+/// <summary>Operational location (dev guide §12) - other master data (Warehouse, Product) scopes off it.</summary>
 public sealed class Branch : Entity, ITenantOwned
 {
     private Branch()
@@ -39,4 +36,18 @@ public sealed class Branch : Entity, ITenantOwned
     public string Name { get; private set; } = null!;
 
     public BranchStatus Status { get; private set; }
+
+    public void Update(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Branch name is required.", nameof(name));
+        }
+
+        Name = name.Trim();
+    }
+
+    public void Activate() => Status = BranchStatus.Active;
+
+    public void Deactivate() => Status = BranchStatus.Inactive;
 }
