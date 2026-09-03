@@ -14,3 +14,9 @@ public sealed class NotFoundException(string message) : Exception(message);
 public sealed class ConflictException(string message) : Exception(message);
 
 public sealed class MfaChallengeRequiredException() : Exception("MFA challenge required.");
+
+/// <summary>
+/// Translated from EF Core's DbUpdateConcurrencyException at the Infrastructure boundary so the
+/// Application layer never depends on EF Core directly (see AppDbContext.SaveChangesAsync).
+/// </summary>
+public sealed class ConcurrencyConflictException(Exception inner) : Exception("The record was modified by another operation. Retry.", inner);
