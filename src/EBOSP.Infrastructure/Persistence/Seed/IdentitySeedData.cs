@@ -69,6 +69,11 @@ internal static class IdentitySeedData
         RolePermission.Create(RoleIds[RoleCodes.Procurement], PermissionIds[PermissionCodes.ProcurementCreate]),
         RolePermission.Create(RoleIds[RoleCodes.Manager], PermissionIds[PermissionCodes.ProcurementApprove]),
         RolePermission.Create(RoleIds[RoleCodes.Finance], PermissionIds[PermissionCodes.PaymentCreate]),
+        // Finance needs the base procurement.approve permission too, not just the ".large" tier -
+        // PurchaseRequestsController.Approve's [Authorize(Policy=procurement.approve)] gates the
+        // action unconditionally, and the ".large" check only runs after that already succeeded
+        // (same relationship as inventory.adjust/inventory.adjust.large in M4).
+        RolePermission.Create(RoleIds[RoleCodes.Finance], PermissionIds[PermissionCodes.ProcurementApprove]),
         RolePermission.Create(RoleIds[RoleCodes.Finance], PermissionIds[PermissionCodes.ProcurementApproveLarge]),
         RolePermission.Create(RoleIds[RoleCodes.SecurityOfficer], PermissionIds[PermissionCodes.SecurityAlertManage]),
         RolePermission.Create(RoleIds[RoleCodes.Auditor], PermissionIds[PermissionCodes.AuditRead]),
