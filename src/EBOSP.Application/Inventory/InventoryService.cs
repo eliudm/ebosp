@@ -1,5 +1,6 @@
 using EBOSP.Application.Common;
 using EBOSP.Application.MasterData;
+using EBOSP.Application.Procurement;
 using EBOSP.Contracts.Common;
 using EBOSP.Contracts.Inventory;
 using EBOSP.Domain.Identity;
@@ -17,6 +18,7 @@ public sealed class InventoryService(
     IReorderRuleRepository reorderRules,
     IWarehouseRepository warehouses,
     IProductRepository products,
+    IPurchaseOrderRepository purchaseOrders,
     IDomainEventRecorder events,
     IUnitOfWork unitOfWork,
     IClock clock,
@@ -30,6 +32,11 @@ public sealed class InventoryService(
         }
 
         await EnsureWarehouseOwnedAsync(tenantId, request.WarehouseId, cancellationToken);
+        if (request.PurchaseOrderId is { } purchaseOrderId)
+        {
+            _ = await purchaseOrders.GetByIdAsync(tenantId, purchaseOrderId, cancellationToken) ?? throw new NotFoundException("Purchase order not found.");
+        }
+
         foreach (var line in request.Lines)
         {
             await EnsureProductOwnedAsync(tenantId, line.ProductId, cancellationToken);

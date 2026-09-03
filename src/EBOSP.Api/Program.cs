@@ -9,11 +9,13 @@ using EBOSP.Application.Common;
 using EBOSP.Application.Identity;
 using EBOSP.Application.Inventory;
 using EBOSP.Application.MasterData;
+using EBOSP.Application.Procurement;
 using EBOSP.Infrastructure.Common;
 using EBOSP.Infrastructure.Identity;
 using EBOSP.Infrastructure.Inventory;
 using EBOSP.Infrastructure.MasterData;
 using EBOSP.Infrastructure.Outbox;
+using EBOSP.Infrastructure.Procurement;
 using EBOSP.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -185,6 +187,20 @@ builder.Services.AddScoped<IStockReservationRepository, StockReservationReposito
 builder.Services.AddScoped<IReorderRuleRepository, ReorderRuleRepository>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IReorderRuleService, ReorderRuleService>();
+
+var procurementOptions = new ProcurementOptions
+{
+    HighValueThreshold = builder.Configuration.GetValue($"{ProcurementOptions.SectionName}:HighValueThreshold", 10000m),
+};
+builder.Services.AddSingleton(procurementOptions);
+builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
+builder.Services.AddScoped<IWorkflowInstanceRepository, WorkflowInstanceRepository>();
+builder.Services.AddScoped<IPurchaseRequestRepository, PurchaseRequestRepository>();
+builder.Services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
+builder.Services.AddScoped<ISupplierService, SupplierService>();
+builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+builder.Services.AddScoped<IPurchaseRequestService, PurchaseRequestService>();
+builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 
 builder.Services
     .AddHealthChecks()
