@@ -5,6 +5,7 @@ public static class PermissionCodes
 {
     public const string InventoryRead = "inventory.read";
     public const string InventoryAdjust = "inventory.adjust";
+    public const string InventoryAdjustLarge = "inventory.adjust.large";
     public const string ProcurementCreate = "procurement.create";
     public const string ProcurementApprove = "procurement.approve";
     public const string PaymentCreate = "payment.create";
@@ -17,6 +18,7 @@ public static class PermissionCodes
     [
         InventoryRead,
         InventoryAdjust,
+        InventoryAdjustLarge,
         ProcurementCreate,
         ProcurementApprove,
         PaymentCreate,
