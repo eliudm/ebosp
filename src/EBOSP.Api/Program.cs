@@ -9,8 +9,10 @@ using EBOSP.Application.Common;
 using EBOSP.Application.Identity;
 using EBOSP.Application.Inventory;
 using EBOSP.Application.MasterData;
+using EBOSP.Application.Billing;
 using EBOSP.Application.Procurement;
 using EBOSP.Application.Sales;
+using EBOSP.Infrastructure.Billing;
 using EBOSP.Infrastructure.Common;
 using EBOSP.Infrastructure.Identity;
 using EBOSP.Infrastructure.Inventory;
@@ -212,6 +214,16 @@ builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IQuotationService, QuotationService>();
 builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
 builder.Services.AddScoped<IDeliveryService, DeliveryService>();
+
+var billingOptions = new BillingOptions
+{
+    LargePaymentThreshold = builder.Configuration.GetValue($"{BillingOptions.SectionName}:LargePaymentThreshold", 10000m),
+};
+builder.Services.AddSingleton(billingOptions);
+builder.Services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 builder.Services
     .AddHealthChecks()
