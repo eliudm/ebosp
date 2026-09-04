@@ -12,4 +12,7 @@ public interface IInvoiceRepository
     Task<PagedResult<Invoice>> ListAsync(Guid tenantId, PagedRequest request, CancellationToken cancellationToken);
 
     Task<bool> ExistsForSalesOrderAsync(Guid tenantId, Guid salesOrderId, CancellationToken cancellationToken);
+
+    /// <summary>Refreshes a tracked invoice to its current database values after a concurrency conflict, so the caller can safely reapply its mutation and retry.</summary>
+    Task ReloadAsync(Invoice invoice, CancellationToken cancellationToken);
 }

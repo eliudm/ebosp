@@ -12,7 +12,4 @@ public interface IPaymentRepository
     Task<PagedResult<Payment>> ListAsync(Guid tenantId, PagedRequest request, CancellationToken cancellationToken);
 
     Task<bool> IdempotencyKeyExistsAsync(Guid tenantId, string idempotencyKey, CancellationToken cancellationToken);
-
-    /// <summary>Sum of Amount across the invoice's Successful payments - the overpayment guard used by PaymentService.ConfirmAsync.</summary>
-    Task<decimal> SumSuccessfulAmountForInvoiceAsync(Guid tenantId, Guid invoiceId, CancellationToken cancellationToken);
 }

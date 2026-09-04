@@ -480,10 +480,19 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Total).HasColumnType("numeric(18,2)");
             entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.Property(e => e.PaidTotal).HasColumnType("numeric(18,2)");
             entity.HasIndex(e => e.TenantId);
             entity.HasIndex(e => new { e.TenantId, e.SalesOrderId }).IsUnique();
             entity.HasOne<SalesOrder>().WithMany().HasForeignKey(e => e.SalesOrderId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<Customer>().WithMany().HasForeignKey(e => e.CustomerId).OnDelete(DeleteBehavior.Restrict);
+            // Postgres system column, not a mapped CLR property - two payments confirmed
+            // concurrently against the same invoice must not both compute PaidTotal from a stale
+            // snapshot (see Invoice.RecordPayment's doc comment).
+            entity.Property<uint>("xmin")
+                .HasColumnName("xmin")
+                .HasColumnType("xid")
+                .ValueGeneratedOnAddOrUpdate()
+                .IsRowVersion();
         });
 
         modelBuilder.Entity<Payment>(entity =>

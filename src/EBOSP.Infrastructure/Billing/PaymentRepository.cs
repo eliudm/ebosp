@@ -27,9 +27,4 @@ public sealed class PaymentRepository(AppDbContext context) : IPaymentRepository
 
     public Task<bool> IdempotencyKeyExistsAsync(Guid tenantId, string idempotencyKey, CancellationToken cancellationToken) =>
         context.Payments.AnyAsync(p => p.TenantId == tenantId && p.IdempotencyKey == idempotencyKey, cancellationToken);
-
-    public Task<decimal> SumSuccessfulAmountForInvoiceAsync(Guid tenantId, Guid invoiceId, CancellationToken cancellationToken) =>
-        context.Payments
-            .Where(p => p.TenantId == tenantId && p.InvoiceId == invoiceId && p.Status == PaymentStatus.Successful)
-            .SumAsync(p => p.Amount, cancellationToken);
 }

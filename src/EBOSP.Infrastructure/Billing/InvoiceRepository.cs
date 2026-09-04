@@ -27,4 +27,7 @@ public sealed class InvoiceRepository(AppDbContext context) : IInvoiceRepository
 
     public Task<bool> ExistsForSalesOrderAsync(Guid tenantId, Guid salesOrderId, CancellationToken cancellationToken) =>
         context.Invoices.AnyAsync(i => i.TenantId == tenantId && i.SalesOrderId == salesOrderId, cancellationToken);
+
+    public Task ReloadAsync(Invoice invoice, CancellationToken cancellationToken) =>
+        context.Entry(invoice).ReloadAsync(cancellationToken);
 }

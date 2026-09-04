@@ -61,6 +61,42 @@ public class BillingFlowTests(CustomWebApplicationFactory factory) : IClassFixtu
     }
 
     [Fact]
+    public async Task ConfirmPayment_ConcurrentSplitPayments_BothSucceedAndInvoiceReachesPaid()
+    {
+        // Regression test for a hardening-review finding: two Pending payments that together
+        // exactly cover an invoice, confirmed at the same time, could each compute PaidTotal from a
+        // stale snapshot and neither would ever mark the invoice Paid - a normal split-payment
+        // scenario, not an adversarial one. Fixed with an xmin concurrency token on Invoice plus a
+        // reload-and-retry loop (same shape as InventoryService's concurrency retry from M4).
+        var adminClient = factory.CreateClient();
+        var admin = await AuthTestHelpers.CreateTenantAdminAsync(adminClient);
+        AuthTestHelpers.AuthorizeAs(adminClient, admin.Tokens);
+        var (branchId, warehouseId, productId) = await ProcurementTestHelpers.CreateBranchWarehouseAndProductAsync(adminClient);
+        var (_, orderId, total) = await BillingTestHelpers.CreateFulfilledSalesOrderAsync(adminClient, branchId, warehouseId, productId, quantity: 10, unitPrice: 10m);
+        Assert.Equal(100m, total);
+        var invoiceResponse = await adminClient.PostAsJsonAsync("/api/v1/invoices", new CreateInvoiceRequest { SalesOrderId = orderId });
+        var invoice = (await invoiceResponse.Content.ReadFromJsonAsync<InvoiceResponse>())!;
+
+        var paymentAResponse = await adminClient.PostAsJsonAsync("/api/v1/payments", new CreatePaymentRequest { InvoiceId = invoice.Id, Amount = 60m, Method = "Cash" });
+        var paymentA = (await paymentAResponse.Content.ReadFromJsonAsync<PaymentResponse>())!;
+        var paymentBResponse = await adminClient.PostAsJsonAsync("/api/v1/payments", new CreatePaymentRequest { InvoiceId = invoice.Id, Amount = 40m, Method = "Cash" });
+        var paymentB = (await paymentBResponse.Content.ReadFromJsonAsync<PaymentResponse>())!;
+
+        var tasks = new[] { paymentA.Id, paymentB.Id }.Select(id =>
+        {
+            var client = factory.CreateClient();
+            AuthTestHelpers.AuthorizeAs(client, admin.Tokens);
+            return client.PostAsync($"/api/v1/payments/{id}/confirm", content: null);
+        });
+        var responses = await Task.WhenAll(tasks);
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.OK, r.StatusCode));
+
+        var invoiceAfter = await adminClient.GetAsync($"/api/v1/invoices/{invoice.Id}");
+        Assert.Equal("Paid", (await invoiceAfter.Content.ReadFromJsonAsync<InvoiceResponse>())!.Status);
+    }
+
+    [Fact]
     public async Task CreateInvoice_FromNonFulfilledOrder_Returns409()
     {
         var adminClient = factory.CreateClient();

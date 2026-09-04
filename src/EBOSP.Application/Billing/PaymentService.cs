@@ -51,26 +51,16 @@ public sealed class PaymentService(
         var invoice = await invoices.GetByIdAsync(tenantId, payment.InvoiceId, cancellationToken)
                       ?? throw new NotFoundException("Invoice not found.");
 
-        // Accepted, narrow race (documented, same as M6's credit-limit check): two concurrent
-        // ConfirmAsync calls against different Pending payments on the same invoice could each read
-        // this sum before either commits and both pass under the total. Fixing it would need
-        // row-level locking, a pattern not used anywhere else in this codebase, for a check neither
-        // governing doc requires be strictly serialized.
-        var alreadySuccessful = await payments.SumSuccessfulAmountForInvoiceAsync(tenantId, invoice.Id, cancellationToken);
-        if (alreadySuccessful + payment.Amount > invoice.Total)
-        {
-            throw new ConflictException("This payment would exceed the invoice total.");
-        }
-
-        var now = clock.UtcNow;
-        payment.Confirm(actingUserId, now);
-        if (alreadySuccessful + payment.Amount == invoice.Total)
-        {
-            invoice.MarkPaid();
-        }
-
+        payment.Confirm(actingUserId, clock.UtcNow);
         events.Record("PaymentReceived", tenantId, nameof(Payment), payment.Id.ToString(), new { payment.InvoiceId, payment.Amount }, actorId: actingUserId);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invoice.PaidTotal is guarded by Postgres's xmin as a real EF Core concurrency token (same
+        // mechanism as StockBalance in M4) - two payments confirmed concurrently against the same
+        // invoice would otherwise each compute PaidTotal from a stale snapshot and could leave a
+        // fully-paid invoice permanently stuck at Issued, with no further payment able to correct it
+        // (any additional amount would now look like an overpayment). The loser here reloads the
+        // now-current PaidTotal and reapplies RecordPayment against it instead.
+        await SaveWithConcurrencyRetryAsync(invoice, () => invoice.RecordPayment(payment.Amount), cancellationToken);
 
         return ToResponse(payment);
     }
@@ -108,6 +98,34 @@ public sealed class PaymentService(
 
     private async Task<Payment> GetOwnedAsync(Guid tenantId, Guid id, CancellationToken cancellationToken) =>
         await payments.GetByIdAsync(tenantId, id, cancellationToken) ?? throw new NotFoundException("Payment not found.");
+
+    /// <summary>Mirrors InventoryService.SaveWithConcurrencyRetryAsync's shape - reapplies the mutation and saves, retrying with a fresh reload of the invoice on a concurrency conflict.</summary>
+    private async Task SaveWithConcurrencyRetryAsync(Invoice invoice, Action reapplyMutation, CancellationToken cancellationToken)
+    {
+        const int maxAttempts = 10;
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                reapplyMutation();
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new ConflictException(ex.Message);
+            }
+
+            try
+            {
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            catch (ConcurrencyConflictException) when (attempt < maxAttempts)
+            {
+                await invoices.ReloadAsync(invoice, cancellationToken);
+                await Task.Delay(Random.Shared.Next(5, 5 * attempt), cancellationToken);
+            }
+        }
+    }
 
     private static PaymentResponse ToResponse(Payment payment) => new(
         payment.Id, payment.InvoiceId, payment.Amount, payment.Method, payment.Status.ToString(), payment.CreatedByUserId, payment.CreatedAt, payment.ConfirmedByUserId, payment.ConfirmedAt);
