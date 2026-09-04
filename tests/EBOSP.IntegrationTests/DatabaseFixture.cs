@@ -18,7 +18,18 @@ public sealed class DatabaseFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await using var context = CreateContext(new TestCurrentUserContext());
-        await context.Database.MigrateAsync();
+        // Every other test project (ApiTests/E2ETests) also migrates this same shared test
+        // database from its own factory instances at roughly the same time - two racing to apply
+        // the same not-yet-applied migration both try to insert the same __EFMigrationsHistory
+        // row, and the loser gets a 23505 duplicate-key error even though the schema ends up
+        // exactly where it should be either way. Safe to swallow.
+        try
+        {
+            await context.Database.MigrateAsync();
+        }
+        catch (Npgsql.PostgresException ex) when (ex.SqlState == "23505" && ex.ConstraintName == "PK___EFMigrationsHistory")
+        {
+        }
     }
 
     public Task DisposeAsync() => Task.CompletedTask;
