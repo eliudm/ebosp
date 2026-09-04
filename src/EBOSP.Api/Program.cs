@@ -10,12 +10,14 @@ using EBOSP.Application.Identity;
 using EBOSP.Application.Inventory;
 using EBOSP.Application.MasterData;
 using EBOSP.Application.Procurement;
+using EBOSP.Application.Sales;
 using EBOSP.Infrastructure.Common;
 using EBOSP.Infrastructure.Identity;
 using EBOSP.Infrastructure.Inventory;
 using EBOSP.Infrastructure.MasterData;
 using EBOSP.Infrastructure.Outbox;
 using EBOSP.Infrastructure.Procurement;
+using EBOSP.Infrastructure.Sales;
 using EBOSP.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -201,6 +203,15 @@ builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IWorkflowService, WorkflowService>();
 builder.Services.AddScoped<IPurchaseRequestService, PurchaseRequestService>();
 builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
+
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+builder.Services.AddScoped<IQuotationRepository, QuotationRepository>();
+builder.Services.AddScoped<ISalesOrderRepository, SalesOrderRepository>();
+builder.Services.AddScoped<IDeliveryRepository, DeliveryRepository>();
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IQuotationService, QuotationService>();
+builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
+builder.Services.AddScoped<IDeliveryService, DeliveryService>();
 
 builder.Services
     .AddHealthChecks()
