@@ -22,6 +22,8 @@ internal static class IdentitySeedData
         [PermissionCodes.MasterDataManage] = Guid.Parse("11111111-1111-1111-1111-111111111109"),
         [PermissionCodes.InventoryAdjustLarge] = Guid.Parse("11111111-1111-1111-1111-111111111110"),
         [PermissionCodes.ProcurementApproveLarge] = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+        [PermissionCodes.SalesCreate] = Guid.Parse("11111111-1111-1111-1111-111111111112"),
+        [PermissionCodes.SalesFulfill] = Guid.Parse("11111111-1111-1111-1111-111111111113"),
     };
 
     private static readonly Dictionary<string, Guid> RoleIds = new()
@@ -33,6 +35,7 @@ internal static class IdentitySeedData
         [RoleCodes.Finance] = Guid.Parse("22222222-2222-2222-2222-222222222205"),
         [RoleCodes.SecurityOfficer] = Guid.Parse("22222222-2222-2222-2222-222222222206"),
         [RoleCodes.Auditor] = Guid.Parse("22222222-2222-2222-2222-222222222207"),
+        [RoleCodes.SalesOfficer] = Guid.Parse("22222222-2222-2222-2222-222222222208"),
     };
 
     public static readonly Permission[] Permissions =
@@ -48,6 +51,8 @@ internal static class IdentitySeedData
         Permission.Create(PermissionIds[PermissionCodes.MasterDataManage], PermissionCodes.MasterDataManage, "Manage branches, warehouses, product categories and products."),
         Permission.Create(PermissionIds[PermissionCodes.InventoryAdjustLarge], PermissionCodes.InventoryAdjustLarge, "Perform stock adjustments above the large-adjustment threshold."),
         Permission.Create(PermissionIds[PermissionCodes.ProcurementApproveLarge], PermissionCodes.ProcurementApproveLarge, "Approve purchase requests above the high-value threshold."),
+        Permission.Create(PermissionIds[PermissionCodes.SalesCreate], PermissionCodes.SalesCreate, "Manage customers, quotations and sales orders."),
+        Permission.Create(PermissionIds[PermissionCodes.SalesFulfill], PermissionCodes.SalesFulfill, "Create deliveries against a sales order."),
     ];
 
     public static readonly Role[] Roles =
@@ -59,6 +64,7 @@ internal static class IdentitySeedData
         Role.Create(RoleIds[RoleCodes.Finance], RoleCodes.Finance, "Finance"),
         Role.Create(RoleIds[RoleCodes.SecurityOfficer], RoleCodes.SecurityOfficer, "Security Officer"),
         Role.Create(RoleIds[RoleCodes.Auditor], RoleCodes.Auditor, "Auditor"),
+        Role.Create(RoleIds[RoleCodes.SalesOfficer], RoleCodes.SalesOfficer, "Sales Officer"),
     ];
 
     public static readonly RolePermission[] RolePermissions =
@@ -77,5 +83,7 @@ internal static class IdentitySeedData
         RolePermission.Create(RoleIds[RoleCodes.Finance], PermissionIds[PermissionCodes.ProcurementApproveLarge]),
         RolePermission.Create(RoleIds[RoleCodes.SecurityOfficer], PermissionIds[PermissionCodes.SecurityAlertManage]),
         RolePermission.Create(RoleIds[RoleCodes.Auditor], PermissionIds[PermissionCodes.AuditRead]),
+        RolePermission.Create(RoleIds[RoleCodes.SalesOfficer], PermissionIds[PermissionCodes.SalesCreate]),
+        RolePermission.Create(RoleIds[RoleCodes.SalesOfficer], PermissionIds[PermissionCodes.SalesFulfill]),
     ];
 }

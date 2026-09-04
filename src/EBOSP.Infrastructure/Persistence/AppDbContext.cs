@@ -74,6 +74,20 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
 
     public DbSet<PurchaseOrderLine> PurchaseOrderLines => Set<PurchaseOrderLine>();
 
+    public DbSet<Customer> Customers => Set<Customer>();
+
+    public DbSet<Quotation> Quotations => Set<Quotation>();
+
+    public DbSet<QuotationLine> QuotationLines => Set<QuotationLine>();
+
+    public DbSet<SalesOrder> SalesOrders => Set<SalesOrder>();
+
+    public DbSet<SalesOrderLine> SalesOrderLines => Set<SalesOrderLine>();
+
+    public DbSet<Delivery> Deliveries => Set<Delivery>();
+
+    public DbSet<DeliveryLine> DeliveryLines => Set<DeliveryLine>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -369,6 +383,89 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             entity.ToTable("purchase_order_lines");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UnitPrice).HasColumnType("numeric(18,2)");
+            entity.HasIndex(e => e.TenantId);
+            entity.HasOne<Product>().WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Customer>(entity =>
+        {
+            entity.ToTable("customers");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.CreditLimit).HasColumnType("numeric(18,2)");
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.HasIndex(e => e.TenantId);
+        });
+
+        modelBuilder.Entity<Quotation>(entity =>
+        {
+            entity.ToTable("quotations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Total).HasColumnType("numeric(18,2)");
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.HasIndex(e => e.TenantId);
+            entity.HasOne<Customer>().WithMany().HasForeignKey(e => e.CustomerId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Branch>().WithMany().HasForeignKey(e => e.BranchId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(e => e.Lines)
+                .WithOne()
+                .HasForeignKey(l => l.QuotationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<QuotationLine>(entity =>
+        {
+            entity.ToTable("quotation_lines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UnitPrice).HasColumnType("numeric(18,2)");
+            entity.HasIndex(e => e.TenantId);
+            entity.HasOne<Product>().WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SalesOrder>(entity =>
+        {
+            entity.ToTable("sales_orders");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Total).HasColumnType("numeric(18,2)");
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.HasIndex(e => e.TenantId);
+            entity.HasIndex(e => new { e.TenantId, e.QuotationId }).IsUnique();
+            entity.HasOne<Quotation>().WithMany().HasForeignKey(e => e.QuotationId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Customer>().WithMany().HasForeignKey(e => e.CustomerId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Branch>().WithMany().HasForeignKey(e => e.BranchId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Warehouse>().WithMany().HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(e => e.Lines)
+                .WithOne()
+                .HasForeignKey(l => l.SalesOrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SalesOrderLine>(entity =>
+        {
+            entity.ToTable("sales_order_lines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UnitPrice).HasColumnType("numeric(18,2)");
+            entity.HasIndex(e => e.TenantId);
+            entity.HasOne<Product>().WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<StockReservation>().WithMany().HasForeignKey(e => e.ReservationId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Delivery>(entity =>
+        {
+            entity.ToTable("deliveries");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.TenantId);
+            entity.HasOne<SalesOrder>().WithMany().HasForeignKey(e => e.SalesOrderId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Warehouse>().WithMany().HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(e => e.Lines)
+                .WithOne()
+                .HasForeignKey(l => l.DeliveryId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DeliveryLine>(entity =>
+        {
+            entity.ToTable("delivery_lines");
+            entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.TenantId);
             entity.HasOne<Product>().WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
         });
