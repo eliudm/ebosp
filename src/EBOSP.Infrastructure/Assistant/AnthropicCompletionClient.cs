@@ -16,26 +16,64 @@ public sealed class AnthropicCompletionClient(HttpClient httpClient, AiOptions o
     private const string ApiVersion = "2023-06-01";
     private const int MaxOutputTokens = 1024;
 
+    /// <summary>1 initial attempt + 2 retries - dev guide §28's reliability table: "External API timeout -> timeout + controlled retry/circuit behavior."</summary>
+    private const int MaxAttempts = 3;
+
     public async Task<AiCompletionTurn> CompleteAsync(string systemPrompt, IReadOnlyList<AiMessage> messages, IReadOnlyList<AiToolDefinition> tools, CancellationToken cancellationToken)
     {
         var requestBody = BuildRequestBody(systemPrompt, messages, tools);
-
-        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "v1/messages")
-        {
-            Content = new StringContent(requestBody.ToJsonString(), Encoding.UTF8, "application/json"),
-        };
-        httpRequest.Headers.Add("x-api-key", options.ApiKey);
-        httpRequest.Headers.Add("anthropic-version", ApiVersion);
-
-        using var httpResponse = await httpClient.SendAsync(httpRequest, cancellationToken);
-        var responseBody = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
-        if (!httpResponse.IsSuccessStatusCode)
-        {
-            throw new InvalidOperationException($"Anthropic API request failed ({(int)httpResponse.StatusCode}): {responseBody}");
-        }
-
+        var responseBody = await SendWithRetryAsync(requestBody, cancellationToken);
         return ParseResponse(responseBody);
     }
+
+    /// <summary>
+    /// Retries only transient failures - a connection/timeout failure or a 5xx status - never a 4xx
+    /// (a bad request or auth failure won't fix itself on retry), and never once the caller's own
+    /// cancellationToken (as opposed to HttpClient's internal timeout token) has actually fired.
+    /// </summary>
+    private async Task<string> SendWithRetryAsync(JsonObject requestBody, CancellationToken cancellationToken)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            HttpResponseMessage? httpResponse = null;
+            try
+            {
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "v1/messages")
+                {
+                    Content = new StringContent(requestBody.ToJsonString(), Encoding.UTF8, "application/json"),
+                };
+                httpRequest.Headers.Add("x-api-key", options.ApiKey);
+                httpRequest.Headers.Add("anthropic-version", ApiVersion);
+
+                httpResponse = await httpClient.SendAsync(httpRequest, cancellationToken);
+            }
+            catch (Exception ex) when (attempt < MaxAttempts && !cancellationToken.IsCancellationRequested && ex is HttpRequestException or TaskCanceledException)
+            {
+                await DelayBeforeRetryAsync(attempt, cancellationToken);
+                continue;
+            }
+
+            using (httpResponse)
+            {
+                var responseBody = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
+                if (httpResponse.IsSuccessStatusCode)
+                {
+                    return responseBody;
+                }
+
+                var isTransient = (int)httpResponse.StatusCode >= 500;
+                if (!isTransient || attempt >= MaxAttempts)
+                {
+                    throw new InvalidOperationException($"Anthropic API request failed ({(int)httpResponse.StatusCode}): {responseBody}");
+                }
+            }
+
+            await DelayBeforeRetryAsync(attempt, cancellationToken);
+        }
+    }
+
+    private static Task DelayBeforeRetryAsync(int attempt, CancellationToken cancellationToken) =>
+        Task.Delay(TimeSpan.FromMilliseconds(Random.Shared.Next(100, 100 * (attempt + 1))), cancellationToken);
 
     private JsonObject BuildRequestBody(string systemPrompt, IReadOnlyList<AiMessage> messages, IReadOnlyList<AiToolDefinition> tools)
     {
