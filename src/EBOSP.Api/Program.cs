@@ -4,6 +4,7 @@ using EBOSP.Api;
 using EBOSP.Api.Authorization;
 using EBOSP.Api.Common;
 using EBOSP.Api.Middleware;
+using EBOSP.Application.Audit;
 using EBOSP.Application.Authorization;
 using EBOSP.Application.Common;
 using EBOSP.Application.Identity;
@@ -12,6 +13,8 @@ using EBOSP.Application.MasterData;
 using EBOSP.Application.Billing;
 using EBOSP.Application.Procurement;
 using EBOSP.Application.Sales;
+using EBOSP.Application.Security;
+using EBOSP.Infrastructure.Audit;
 using EBOSP.Infrastructure.Billing;
 using EBOSP.Infrastructure.Common;
 using EBOSP.Infrastructure.Identity;
@@ -20,6 +23,7 @@ using EBOSP.Infrastructure.MasterData;
 using EBOSP.Infrastructure.Outbox;
 using EBOSP.Infrastructure.Procurement;
 using EBOSP.Infrastructure.Sales;
+using EBOSP.Infrastructure.Security;
 using EBOSP.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -224,6 +228,11 @@ builder.Services.AddScoped<IInvoiceRepository, InvoiceRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+builder.Services.AddScoped<ISecurityAlertRepository, SecurityAlertRepository>();
+builder.Services.AddScoped<ISecurityAlertService, SecurityAlertService>();
+builder.Services.AddScoped<IAuditEventRepository, AuditEventRepository>();
+builder.Services.AddScoped<IAuditEventQueryService, AuditEventQueryService>();
 
 builder.Services
     .AddHealthChecks()
