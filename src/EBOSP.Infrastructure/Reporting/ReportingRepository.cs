@@ -59,11 +59,17 @@ public sealed class ReportingRepository(AppDbContext context, IClock clock) : IR
             join p in products on b.ProductId equals p.Id
             let effectiveLevel = r != null ? r.ReorderLevel : p.ReorderLevel
             where effectiveLevel > 0 && b.QuantityOnHand < effectiveLevel
-            select new LowStockReportItem(b.WarehouseId, b.ProductId, b.QuantityOnHand, effectiveLevel);
+            select new { b.WarehouseId, b.ProductId, b.QuantityOnHand, EffectiveLevel = effectiveLevel };
 
         var totalCount = await query.CountAsync(cancellationToken);
+        // Sort on the anonymous projection, not the LowStockReportItem record - EF Core can't
+        // translate ordering by a property read back off an already-constructed record type.
         var ordered = request.SortDescending ? query.OrderByDescending(i => i.QuantityOnHand) : query.OrderBy(i => i.QuantityOnHand);
-        var items = await ordered.Skip((request.Page - 1) * request.PageSize).Take(request.PageSize).ToListAsync(cancellationToken);
+        var items = await ordered
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .Select(i => new LowStockReportItem(i.WarehouseId, i.ProductId, i.QuantityOnHand, i.EffectiveLevel))
+            .ToListAsync(cancellationToken);
 
         return new PagedResult<LowStockReportItem> { Items = items, Page = request.Page, PageSize = request.PageSize, TotalCount = totalCount };
     }
