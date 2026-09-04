@@ -17,4 +17,7 @@ public interface IUserRepository
     Task<User?> FindByEmailIgnoringTenantAsync(string email, CancellationToken cancellationToken);
 
     Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken);
+
+    /// <summary>Refreshes a tracked user to its current database values after a concurrency conflict, so the caller can safely reapply its mutation and retry.</summary>
+    Task ReloadAsync(User user, CancellationToken cancellationToken);
 }

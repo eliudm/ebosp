@@ -42,6 +42,41 @@ public class SecurityFlowTests(CustomWebApplicationFactory factory) : IClassFixt
     }
 
     [Fact]
+    public async Task ConcurrentFailedLogins_StillLockOutAndRaiseAlert()
+    {
+        // Regression test for a hardening-review finding: User had no concurrency token, so
+        // concurrent failed-login requests raced on a plain in-memory FailedLoginCount++ and could
+        // lose updates - an attacker firing guesses concurrently instead of sequentially could keep
+        // the count from ever reaching the lockout threshold, evading both lockout and this alert.
+        var adminClient = factory.CreateClient();
+        var admin = await AuthTestHelpers.CreateTenantAdminAsync(adminClient);
+        AuthTestHelpers.AuthorizeAs(adminClient, admin.Tokens);
+
+        var targetEmail = $"lockout-concurrent-{Guid.NewGuid():N}@example.com";
+        const string correctPassword = "SomePassword123!";
+        var createResponse = await adminClient.PostAsJsonAsync("/api/v1/users", new CreateUserRequest { Email = targetEmail, Password = correctPassword });
+        var created = (await createResponse.Content.ReadFromJsonAsync<UserResponse>())!;
+        (await adminClient.PostAsync($"/api/v1/users/{created.Id}/activate", content: null)).EnsureSuccessStatusCode();
+
+        var tasks = Enumerable.Range(0, 10).Select(_ =>
+        {
+            var client = factory.CreateClient();
+            return client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest { Email = targetEmail, Password = "WrongPassword!" });
+        });
+        await Task.WhenAll(tasks);
+
+        // If FailedLoginCount lost updates under concurrency, this would wrongly succeed instead of
+        // being rejected for a locked-out account - the direct proof the count really reached 10.
+        var correctPasswordClient = factory.CreateClient();
+        var lockedOutResponse = await correctPasswordClient.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest { Email = targetEmail, Password = correctPassword });
+        Assert.Equal(HttpStatusCode.Unauthorized, lockedOutResponse.StatusCode);
+
+        var alertsResponse = await adminClient.GetAsync("/api/v1/security/alerts");
+        var alerts = (await alertsResponse.Content.ReadFromJsonAsync<PagedResult<SecurityAlertResponse>>())!;
+        Assert.Contains(alerts.Items, a => a.Rule == "RepeatedLoginFailures");
+    }
+
+    [Fact]
     public async Task LargeStockAdjustment_RaisesCriticalSeverityAlert()
     {
         var adminClient = factory.CreateClient();

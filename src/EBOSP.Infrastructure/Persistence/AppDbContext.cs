@@ -139,6 +139,15 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
             entity.HasIndex(e => e.Email).IsUnique();
             entity.HasIndex(e => e.TenantId);
+            // Postgres system column, not a mapped CLR property - concurrent failed-login attempts
+            // against the same account must not lose updates to FailedLoginCount (a lost update
+            // here would let an attacker keep the count from ever reaching MaxFailedLoginAttempts,
+            // evading both account lockout and the RepeatedLoginFailures security alert).
+            entity.Property<uint>("xmin")
+                .HasColumnName("xmin")
+                .HasColumnType("xid")
+                .ValueGeneratedOnAddOrUpdate()
+                .IsRowVersion();
         });
 
         modelBuilder.Entity<Permission>(entity =>

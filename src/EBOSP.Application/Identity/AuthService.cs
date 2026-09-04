@@ -57,29 +57,7 @@ public sealed class AuthService(
 
         if (verification == PasswordVerificationResult.Failed)
         {
-            user.RecordFailedLogin(now);
-
-            // The "account locked" branch above short-circuits every later attempt before it ever
-            // reaches RecordFailedLogin again, so reaching here with a newly-true IsLockedOut means
-            // this exact failure is the one that just tripped it - not a re-raise on every
-            // subsequent attempt against an already-locked account (spec §16: "Repeated login
-            // failures - 10 failures within configured window - Rate limit + alert").
-            if (user.IsLockedOut(now))
-            {
-                await securityAlerts.AddAsync(
-                    SecurityAlert.Raise(
-                        user.TenantId,
-                        "RepeatedLoginFailures",
-                        SecurityAlertSeverity.High,
-                        "Account locked after repeated failed login attempts.",
-                        now,
-                        relatedActorId: user.Id,
-                        relatedAggregateType: nameof(User),
-                        relatedAggregateId: user.Id.ToString()),
-                    cancellationToken);
-            }
-
-            await RecordLoginFailedAsync(user, "invalid credentials", cancellationToken);
+            await RecordFailedLoginWithRetryAsync(user, now, cancellationToken);
             throw new AuthenticationFailedException();
         }
 
@@ -203,5 +181,59 @@ public sealed class AuthService(
     {
         events.Record("LoginFailed", user.TenantId, nameof(User), user.Id.ToString(), new { Reason = reason }, actorId: user.Id);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Increments FailedLoginCount with a reload-and-retry loop, guarded by a real EF Core
+    /// concurrency token on User (same mechanism as StockBalance/Invoice) - without it, concurrent
+    /// failed-login requests against the same account race on a plain in-memory increment and lose
+    /// updates, letting an attacker keep the count from ever reaching MaxFailedLoginAttempts and
+    /// evading both account lockout and the RepeatedLoginFailures alert below. Mirrors
+    /// InventoryService/PaymentService's SaveWithConcurrencyRetryAsync shape.
+    /// </summary>
+    private async Task RecordFailedLoginWithRetryAsync(User user, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        const int maxAttempts = 10;
+        for (var attempt = 1; ; attempt++)
+        {
+            user.RecordFailedLogin(now);
+            events.Record("LoginFailed", user.TenantId, nameof(User), user.Id.ToString(), new { Reason = "invalid credentials" }, actorId: user.Id);
+
+            // The "account locked" branch above short-circuits every later attempt before it ever
+            // reaches RecordFailedLogin again, so reaching here with a newly-true IsLockedOut means
+            // this exact failure is the one that just tripped it - not a re-raise on every
+            // subsequent attempt against an already-locked account (spec §16: "Repeated login
+            // failures - 10 failures within configured window - Rate limit + alert").
+            if (user.IsLockedOut(now))
+            {
+                await securityAlerts.AddAsync(
+                    SecurityAlert.Raise(
+                        user.TenantId,
+                        "RepeatedLoginFailures",
+                        SecurityAlertSeverity.High,
+                        "Account locked after repeated failed login attempts.",
+                        now,
+                        relatedActorId: user.Id,
+                        relatedAggregateType: nameof(User),
+                        relatedAggregateId: user.Id.ToString()),
+                    cancellationToken);
+            }
+
+            try
+            {
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            catch (ConcurrencyConflictException) when (attempt < maxAttempts)
+            {
+                // A failed save leaves the OutboxMessage (and, on the tripping attempt, the
+                // SecurityAlert) added-but-uncommitted on this request's scoped DbContext - without
+                // discarding them first, the retry would add a second copy of each alongside the
+                // first, and both would be inserted together on whichever attempt finally succeeds.
+                unitOfWork.DiscardChanges();
+                await users.ReloadAsync(user, cancellationToken);
+                await Task.Delay(Random.Shared.Next(5, 5 * attempt), cancellationToken);
+            }
+        }
     }
 }

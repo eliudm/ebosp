@@ -21,4 +21,7 @@ public sealed class UserRepository(AppDbContext context) : IUserRepository
 
     public Task<bool> EmailExistsAsync(string email, CancellationToken cancellationToken) =>
         context.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == email, cancellationToken);
+
+    public Task ReloadAsync(User user, CancellationToken cancellationToken) =>
+        context.Entry(user).ReloadAsync(cancellationToken);
 }
