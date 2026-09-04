@@ -50,6 +50,15 @@ public sealed class PurchaseRequestService(
             throw new ForbiddenOperationException("You cannot approve your own purchase request.");
         }
 
+        // Checked explicitly (client error) rather than letting WorkflowInstance.Approve's own
+        // guard throw InvalidOperationException, which GlobalExceptionHandler would otherwise map
+        // to an unhandled 500 - rejection is terminal (dev guide §14), so re-approving an
+        // already-decided request must surface as a clean 409, not a server fault.
+        if (purchaseRequest.Status != PurchaseRequestStatus.Pending)
+        {
+            throw new ConflictException("Only a pending purchase request can be approved.");
+        }
+
         var workflow = await workflows.FindForEntityAsync(tenantId, EntityType, purchaseRequest.Id, cancellationToken)
                         ?? throw new NotFoundException("Workflow not found.");
 
@@ -69,6 +78,11 @@ public sealed class PurchaseRequestService(
         if (purchaseRequest.RequestedByUserId == actingUserId)
         {
             throw new ForbiddenOperationException("You cannot reject your own purchase request.");
+        }
+
+        if (purchaseRequest.Status != PurchaseRequestStatus.Pending)
+        {
+            throw new ConflictException("Only a pending purchase request can be rejected.");
         }
 
         var workflow = await workflows.FindForEntityAsync(tenantId, EntityType, purchaseRequest.Id, cancellationToken)
