@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\EBOSP.Infrastructure\EBOSP.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\EBOSP.Application\EBOSP.Application.csproj" />
+    <ProjectReference Include="..\..\src\EBOSP.Worker\EBOSP.Worker.csproj" />
   </ItemGroup>
 
 </Project>
