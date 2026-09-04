@@ -24,6 +24,8 @@ internal static class IdentitySeedData
         [PermissionCodes.ProcurementApproveLarge] = Guid.Parse("11111111-1111-1111-1111-111111111111"),
         [PermissionCodes.SalesCreate] = Guid.Parse("11111111-1111-1111-1111-111111111112"),
         [PermissionCodes.SalesFulfill] = Guid.Parse("11111111-1111-1111-1111-111111111113"),
+        [PermissionCodes.InvoiceCreate] = Guid.Parse("11111111-1111-1111-1111-111111111114"),
+        [PermissionCodes.PaymentCreateLarge] = Guid.Parse("11111111-1111-1111-1111-111111111115"),
     };
 
     private static readonly Dictionary<string, Guid> RoleIds = new()
@@ -53,6 +55,8 @@ internal static class IdentitySeedData
         Permission.Create(PermissionIds[PermissionCodes.ProcurementApproveLarge], PermissionCodes.ProcurementApproveLarge, "Approve purchase requests above the high-value threshold."),
         Permission.Create(PermissionIds[PermissionCodes.SalesCreate], PermissionCodes.SalesCreate, "Manage customers, quotations and sales orders."),
         Permission.Create(PermissionIds[PermissionCodes.SalesFulfill], PermissionCodes.SalesFulfill, "Create deliveries against a sales order."),
+        Permission.Create(PermissionIds[PermissionCodes.InvoiceCreate], PermissionCodes.InvoiceCreate, "Create invoices for fulfilled sales orders."),
+        Permission.Create(PermissionIds[PermissionCodes.PaymentCreateLarge], PermissionCodes.PaymentCreateLarge, "Confirm payments above the large-payment threshold."),
     ];
 
     public static readonly Role[] Roles =
@@ -75,6 +79,10 @@ internal static class IdentitySeedData
         RolePermission.Create(RoleIds[RoleCodes.Procurement], PermissionIds[PermissionCodes.ProcurementCreate]),
         RolePermission.Create(RoleIds[RoleCodes.Manager], PermissionIds[PermissionCodes.ProcurementApprove]),
         RolePermission.Create(RoleIds[RoleCodes.Finance], PermissionIds[PermissionCodes.PaymentCreate]),
+        RolePermission.Create(RoleIds[RoleCodes.Finance], PermissionIds[PermissionCodes.InvoiceCreate]),
+        // payment.create.large is deliberately NOT granted to finance - there's no second, senior
+        // finance role in this catalogue to split it against, so large payments need tenant-admin
+        // (granted automatically below), the same relationship a teller/supervisor limit models.
         // Finance needs the base procurement.approve permission too, not just the ".large" tier -
         // PurchaseRequestsController.Approve's [Authorize(Policy=procurement.approve)] gates the
         // action unconditionally, and the ".large" check only runs after that already succeeded
