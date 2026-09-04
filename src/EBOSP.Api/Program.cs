@@ -7,19 +7,23 @@ using EBOSP.Api.Middleware;
 using EBOSP.Application.Audit;
 using EBOSP.Application.Authorization;
 using EBOSP.Application.Common;
+using EBOSP.Application.Documents;
 using EBOSP.Application.Identity;
 using EBOSP.Application.Inventory;
 using EBOSP.Application.MasterData;
 using EBOSP.Application.Billing;
+using EBOSP.Application.Notifications;
 using EBOSP.Application.Procurement;
 using EBOSP.Application.Sales;
 using EBOSP.Application.Security;
 using EBOSP.Infrastructure.Audit;
 using EBOSP.Infrastructure.Billing;
 using EBOSP.Infrastructure.Common;
+using EBOSP.Infrastructure.Documents;
 using EBOSP.Infrastructure.Identity;
 using EBOSP.Infrastructure.Inventory;
 using EBOSP.Infrastructure.MasterData;
+using EBOSP.Infrastructure.Notifications;
 using EBOSP.Infrastructure.Outbox;
 using EBOSP.Infrastructure.Procurement;
 using EBOSP.Infrastructure.Sales;
@@ -233,6 +237,23 @@ builder.Services.AddScoped<ISecurityAlertRepository, SecurityAlertRepository>();
 builder.Services.AddScoped<ISecurityAlertService, SecurityAlertService>();
 builder.Services.AddScoped<IAuditEventRepository, AuditEventRepository>();
 builder.Services.AddScoped<IAuditEventQueryService, AuditEventQueryService>();
+
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+
+var documentStorageOptions = new DocumentStorageOptions
+{
+    RootPath = builder.Configuration.GetValue($"{DocumentStorageOptions.SectionName}:RootPath", "./data/documents")!,
+};
+builder.Services.AddSingleton(documentStorageOptions);
+builder.Services.AddSingleton<IObjectStorage>(new LocalDiskObjectStorage(documentStorageOptions));
+var documentOptions = new DocumentOptions
+{
+    MaxSizeBytes = builder.Configuration.GetValue($"{DocumentOptions.SectionName}:MaxSizeBytes", 10 * 1024 * 1024L),
+};
+builder.Services.AddSingleton(documentOptions);
+builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
+builder.Services.AddScoped<IDocumentService, DocumentService>();
 
 builder.Services
     .AddHealthChecks()
