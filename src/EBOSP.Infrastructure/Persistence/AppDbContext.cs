@@ -92,6 +92,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
 
     public DbSet<Payment> Payments => Set<Payment>();
 
+    public DbSet<SecurityAlert> SecurityAlerts => Set<SecurityAlert>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -106,6 +108,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             entity.Property(e => e.Payload).IsRequired();
             entity.HasIndex(e => e.PublishedAt);
             entity.HasIndex(e => e.TenantId);
+            // Support the M8 audit-search filters (dev guide §18: "filters by actor, ... and time").
+            entity.HasIndex(e => new { e.TenantId, e.OccurredAt });
+            entity.HasIndex(e => new { e.TenantId, e.ActorId });
         });
 
         modelBuilder.Entity<Tenant>(entity =>
@@ -506,6 +511,21 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             entity.HasIndex(e => e.TenantId);
             entity.HasIndex(e => new { e.TenantId, e.IdempotencyKey }).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
             entity.HasOne<Invoice>().WithMany().HasForeignKey(e => e.InvoiceId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SecurityAlert>(entity =>
+        {
+            entity.ToTable("security_alerts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Rule).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Severity).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.RelatedAggregateType).HasMaxLength(200);
+            entity.Property(e => e.RelatedAggregateId).HasMaxLength(200);
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.Property(e => e.ResolutionNotes).HasMaxLength(1000);
+            entity.HasIndex(e => e.TenantId);
+            entity.HasIndex(e => new { e.TenantId, e.Status });
         });
 
         // Tenant isolation is enforced here, not left to each query author (spec §12).
