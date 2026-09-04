@@ -11,7 +11,9 @@ public static class PermissionCodes
     public const string ProcurementApproveLarge = "procurement.approve.large";
     public const string SalesCreate = "sales.create";
     public const string SalesFulfill = "sales.fulfill";
+    public const string InvoiceCreate = "invoice.create";
     public const string PaymentCreate = "payment.create";
+    public const string PaymentCreateLarge = "payment.create.large";
     public const string SecurityAlertManage = "security.alert.manage";
     public const string AuditRead = "audit.read";
     public const string UserManage = "user.manage";
@@ -27,7 +29,9 @@ public static class PermissionCodes
         ProcurementApproveLarge,
         SalesCreate,
         SalesFulfill,
+        InvoiceCreate,
         PaymentCreate,
+        PaymentCreateLarge,
         SecurityAlertManage,
         AuditRead,
         UserManage,
