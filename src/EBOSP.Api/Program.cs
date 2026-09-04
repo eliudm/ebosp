@@ -247,9 +247,12 @@ var documentStorageOptions = new DocumentStorageOptions
 };
 builder.Services.AddSingleton(documentStorageOptions);
 builder.Services.AddSingleton<IObjectStorage>(new LocalDiskObjectStorage(documentStorageOptions));
+var defaultDocumentOptions = new DocumentOptions();
 var documentOptions = new DocumentOptions
 {
-    MaxSizeBytes = builder.Configuration.GetValue($"{DocumentOptions.SectionName}:MaxSizeBytes", 10 * 1024 * 1024L),
+    MaxSizeBytes = builder.Configuration.GetValue($"{DocumentOptions.SectionName}:MaxSizeBytes", defaultDocumentOptions.MaxSizeBytes),
+    AllowedExtensions = builder.Configuration.GetSection($"{DocumentOptions.SectionName}:AllowedExtensions").Get<string[]>()
+        ?? defaultDocumentOptions.AllowedExtensions,
 };
 builder.Services.AddSingleton(documentOptions);
 builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
