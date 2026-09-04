@@ -8,6 +8,7 @@ public static class RoleCodes
     public const string Procurement = "procurement";
     public const string Manager = "manager";
     public const string Finance = "finance";
+    public const string SalesOfficer = "sales-officer";
     public const string SecurityOfficer = "security-officer";
     public const string Auditor = "auditor";
 }
