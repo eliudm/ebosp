@@ -4,6 +4,7 @@ using EBOSP.Api;
 using EBOSP.Api.Authorization;
 using EBOSP.Api.Common;
 using EBOSP.Api.Middleware;
+using EBOSP.Application.Assistant;
 using EBOSP.Application.Audit;
 using EBOSP.Application.Authorization;
 using EBOSP.Application.Common;
@@ -17,6 +18,7 @@ using EBOSP.Application.Procurement;
 using EBOSP.Application.Reporting;
 using EBOSP.Application.Sales;
 using EBOSP.Application.Security;
+using EBOSP.Infrastructure.Assistant;
 using EBOSP.Infrastructure.Audit;
 using EBOSP.Infrastructure.Billing;
 using EBOSP.Infrastructure.Common;
@@ -262,6 +264,32 @@ builder.Services.AddScoped<IDocumentService, DocumentService>();
 
 builder.Services.AddScoped<IReportingRepository, ReportingRepository>();
 builder.Services.AddScoped<IReportingService, ReportingService>();
+
+// AI assistant (spec §26, dev guide §43) - an "Optional Differentiator", so an absent Ai:ApiKey
+// disables just this feature at request time (503 via ServiceUnavailableException) instead of
+// making the whole app unstartable, unlike Jwt:SigningKey above.
+var aiOptions = new AiOptions
+{
+    ApiKey = builder.Configuration["Ai:ApiKey"],
+    Model = builder.Configuration.GetValue($"{AiOptions.SectionName}:Model", new AiOptions().Model)!,
+    MaxToolCallsPerRequest = builder.Configuration.GetValue($"{AiOptions.SectionName}:MaxToolCallsPerRequest", new AiOptions().MaxToolCallsPerRequest),
+    TimeoutSeconds = builder.Configuration.GetValue($"{AiOptions.SectionName}:TimeoutSeconds", new AiOptions().TimeoutSeconds),
+};
+builder.Services.AddSingleton(aiOptions);
+if (string.IsNullOrWhiteSpace(aiOptions.ApiKey))
+{
+    builder.Services.AddScoped<IAiCompletionClient, UnavailableAiCompletionClient>();
+}
+else
+{
+    builder.Services.AddHttpClient<IAiCompletionClient, AnthropicCompletionClient>(httpClient =>
+    {
+        httpClient.BaseAddress = new Uri("https://api.anthropic.com");
+        httpClient.Timeout = TimeSpan.FromSeconds(aiOptions.TimeoutSeconds);
+    });
+}
+
+builder.Services.AddScoped<IAssistantService, AssistantService>();
 
 builder.Services
     .AddHealthChecks()

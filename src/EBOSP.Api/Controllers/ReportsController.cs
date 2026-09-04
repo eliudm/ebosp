@@ -52,6 +52,13 @@ public sealed class ReportsController(IReportingService reports, ICurrentUserCon
     public async Task<ActionResult<PagedResult<OutstandingInvoiceItem>>> OutstandingInvoices([FromQuery] PagedRequest request, CancellationToken cancellationToken) =>
         Ok(await reports.GetOutstandingInvoicesAsync(TenantId, request, cancellationToken));
 
+    [HttpGet("top-products")]
+    public async Task<ActionResult<IReadOnlyList<TopProductItem>>> TopProducts([FromQuery] DateTimeOffset? from, [FromQuery] DateTimeOffset? to, [FromQuery] int top, CancellationToken cancellationToken)
+    {
+        var (resolvedFrom, resolvedTo) = ResolveRange(from, to);
+        return Ok(await reports.GetTopProductsAsync(TenantId, resolvedFrom, resolvedTo, Math.Clamp(top <= 0 ? 5 : top, 1, 20), cancellationToken));
+    }
+
     private (DateTimeOffset From, DateTimeOffset To) ResolveRange(DateTimeOffset? from, DateTimeOffset? to)
     {
         var now = clock.UtcNow;
