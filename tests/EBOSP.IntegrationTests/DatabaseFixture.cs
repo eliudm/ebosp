@@ -15,20 +15,31 @@ public sealed class DatabaseFixture : IAsyncLifetime
         Environment.GetEnvironmentVariable("ConnectionStrings__Default")
         ?? "Host=localhost;Port=5435;Database=ebosp;Username=ebosp;Password=ebosp_dev_only";
 
+    // Arbitrary fixed key, same constant ApiTests' MigrationLock uses - both projects migrate the
+    // same shared database from separate processes, so the lock only works if every caller across
+    // every test project agrees on it.
+    private const long MigrationAdvisoryLockKey = 483920;
+
     public async Task InitializeAsync()
     {
         await using var context = CreateContext(new TestCurrentUserContext());
         // Every other test project (ApiTests/E2ETests) also migrates this same shared test
-        // database from its own factory instances at roughly the same time - two racing to apply
-        // the same not-yet-applied migration both try to insert the same __EFMigrationsHistory
-        // row, and the loser gets a 23505 duplicate-key error even though the schema ends up
-        // exactly where it should be either way. Safe to swallow.
+        // database from its own factory instances at roughly the same time. Against a fresh,
+        // unmigrated database (what CI's Postgres service container is on every run) two racing
+        // migrators can both start creating the same tables, so the loser fails with a Postgres
+        // error even though the schema ends up correct either way - a session advisory lock
+        // serializes the actual migration work instead of trying to catch every collision after
+        // the fact.
+        await context.Database.OpenConnectionAsync();
         try
         {
+            await context.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_lock({MigrationAdvisoryLockKey});");
             await context.Database.MigrateAsync();
         }
-        catch (Npgsql.PostgresException ex) when (ex.SqlState == "23505" && ex.ConstraintName == "PK___EFMigrationsHistory")
+        finally
         {
+            await context.Database.ExecuteSqlRawAsync($"SELECT pg_advisory_unlock({MigrationAdvisoryLockKey});");
+            await context.Database.CloseConnectionAsync();
         }
     }
 

@@ -79,18 +79,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     {
         using var scope = Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        // Every test class in this project (and EBOSP.E2ETests, which reuses this factory) gets
-        // its own CustomWebApplicationFactory instance, each calling MigrateAsync() against the
-        // same shared test database - two racing to apply the same not-yet-applied migration both
-        // try to insert the same __EFMigrationsHistory row, and the loser gets a 23505 duplicate-
-        // key error even though the schema ends up exactly where it should be either way.
-        try
-        {
-            await context.Database.MigrateAsync();
-        }
-        catch (Npgsql.PostgresException ex) when (ex.SqlState == "23505" && ex.ConstraintName == "PK___EFMigrationsHistory")
-        {
-        }
+        await MigrationLock.MigrateSerializedAsync(context);
     }
 
     public new Task DisposeAsync() => Task.CompletedTask;
