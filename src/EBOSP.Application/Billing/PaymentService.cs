@@ -56,7 +56,10 @@ public sealed class PaymentService(
 
         var now = clock.UtcNow;
         payment.Confirm(actingUserId, now);
-        events.Record("PaymentReceived", tenantId, nameof(Payment), payment.Id.ToString(), new { payment.InvoiceId, payment.Amount }, actorId: actingUserId);
+        // NotifyUserId/NotificationTitle are read by the M9 outbox background processor
+        // (EBOSP.Worker) - the invoice is already loaded here, so the recipient is free.
+        events.Record("PaymentReceived", tenantId, nameof(Payment), payment.Id.ToString(),
+            new { payment.InvoiceId, payment.Amount, NotifyUserId = invoice.CreatedByUserId, NotificationTitle = "A payment was received" }, actorId: actingUserId);
 
         // The caller-side permission check (payment.create.large) already happened before this
         // method was invoked - this is the corresponding "+ alert" half of spec §16's "Unusual

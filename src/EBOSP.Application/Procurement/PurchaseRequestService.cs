@@ -66,7 +66,11 @@ public sealed class PurchaseRequestService(
         workflow.Approve(actingUserId, now, request.Notes);
         purchaseRequest.MarkApproved();
 
-        events.Record("PurchaseApproved", tenantId, EntityType, purchaseRequest.Id.ToString(), new { request.Notes }, actorId: actingUserId);
+        // NotifyUserId/NotificationTitle are read by the M9 outbox background processor
+        // (EBOSP.Worker) to create an in-app notification - no event-type-specific knowledge lives
+        // in the worker, it just looks for these two well-known fields on any event's payload.
+        events.Record("PurchaseApproved", tenantId, EntityType, purchaseRequest.Id.ToString(),
+            new { request.Notes, NotifyUserId = purchaseRequest.RequestedByUserId, NotificationTitle = "Your purchase request was approved" }, actorId: actingUserId);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return ToResponse(purchaseRequest);
@@ -92,7 +96,8 @@ public sealed class PurchaseRequestService(
         workflow.Reject(actingUserId, now, request.Notes);
         purchaseRequest.MarkRejected();
 
-        events.Record("PurchaseRequestRejected", tenantId, EntityType, purchaseRequest.Id.ToString(), new { request.Notes }, actorId: actingUserId);
+        events.Record("PurchaseRequestRejected", tenantId, EntityType, purchaseRequest.Id.ToString(),
+            new { request.Notes, NotifyUserId = purchaseRequest.RequestedByUserId, NotificationTitle = "Your purchase request was rejected" }, actorId: actingUserId);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return ToResponse(purchaseRequest);

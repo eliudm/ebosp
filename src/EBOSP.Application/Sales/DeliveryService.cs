@@ -44,7 +44,10 @@ public sealed class DeliveryService(
 
         order.MarkFulfilled();
 
-        events.Record("DeliveryCreated", tenantId, nameof(Delivery), delivery.Id.ToString(), new { delivery.SalesOrderId, delivery.WarehouseId }, actorId: actingUserId);
+        // NotifyUserId/NotificationTitle are read by the M9 outbox background processor
+        // (EBOSP.Worker) - the order is already loaded here, so the recipient is free.
+        events.Record("DeliveryCreated", tenantId, nameof(Delivery), delivery.Id.ToString(),
+            new { delivery.SalesOrderId, delivery.WarehouseId, NotifyUserId = order.CreatedByUserId, NotificationTitle = "Your sales order has shipped" }, actorId: actingUserId);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return ToResponse(delivery);
