@@ -266,6 +266,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             entity.Property(e => e.IdempotencyKey).HasMaxLength(100);
             entity.HasIndex(e => new { e.TenantId, e.WarehouseId, e.ProductId });
             entity.HasIndex(e => new { e.TenantId, e.IdempotencyKey }).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
+            // Supports the M10 inventory movement report's date-range filter (spec §19: "keep
+            // reporting queries from damaging transactional performance").
+            entity.HasIndex(e => new { e.TenantId, e.OccurredAt });
             entity.HasOne<Warehouse>().WithMany().HasForeignKey(e => e.WarehouseId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<Product>().WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
         });
@@ -392,6 +395,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
             entity.HasIndex(e => e.TenantId);
             entity.HasIndex(e => new { e.TenantId, e.PoNumber }).IsUnique();
+            // Supports the M10 procurement spend report's date-range filter.
+            entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
             entity.HasOne<PurchaseRequest>().WithMany().HasForeignKey(e => e.PurchaseRequestId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<Supplier>().WithMany().HasForeignKey(e => e.SupplierId).OnDelete(DeleteBehavior.Restrict);
             entity.HasMany(e => e.Lines)
@@ -451,6 +456,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
             entity.HasIndex(e => e.TenantId);
             entity.HasIndex(e => new { e.TenantId, e.QuotationId }).IsUnique();
+            // Supports the M10 sales report's date-range filter.
+            entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
             entity.HasOne<Quotation>().WithMany().HasForeignKey(e => e.QuotationId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<Customer>().WithMany().HasForeignKey(e => e.CustomerId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<Branch>().WithMany().HasForeignKey(e => e.BranchId).OnDelete(DeleteBehavior.Restrict);
@@ -501,6 +508,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             entity.Property(e => e.PaidTotal).HasColumnType("numeric(18,2)");
             entity.HasIndex(e => e.TenantId);
             entity.HasIndex(e => new { e.TenantId, e.SalesOrderId }).IsUnique();
+            // Support the M10 sales report's date-range filter and the outstanding-invoices report's
+            // status filter.
+            entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
+            entity.HasIndex(e => new { e.TenantId, e.Status });
             entity.HasOne<SalesOrder>().WithMany().HasForeignKey(e => e.SalesOrderId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<Customer>().WithMany().HasForeignKey(e => e.CustomerId).OnDelete(DeleteBehavior.Restrict);
             // Postgres system column, not a mapped CLR property - two payments confirmed
@@ -523,6 +534,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             entity.Property(e => e.IdempotencyKey).HasMaxLength(100);
             entity.HasIndex(e => e.TenantId);
             entity.HasIndex(e => new { e.TenantId, e.IdempotencyKey }).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
+            // Supports the M10 sales report's "collected" aggregation (successful payments within a date range).
+            entity.HasIndex(e => new { e.TenantId, e.Status, e.ConfirmedAt });
             entity.HasOne<Invoice>().WithMany().HasForeignKey(e => e.InvoiceId).OnDelete(DeleteBehavior.Restrict);
         });
 
