@@ -88,6 +88,20 @@ public class ReportsFlowTests(CustomWebApplicationFactory factory) : IClassFixtu
     }
 
     [Fact]
+    public async Task SlowMovingInventoryReport_ExtremeDaysInactive_IsClampedNotUnhandled()
+    {
+        // Regression test for a hardening-review finding: an unclamped daysInactive overflowed
+        // DateTimeOffset.AddDays and threw an unhandled 500 instead of a bounded result.
+        var adminClient = factory.CreateClient();
+        var admin = await AuthTestHelpers.CreateTenantAdminAsync(adminClient);
+        AuthTestHelpers.AuthorizeAs(adminClient, admin.Tokens);
+
+        var response = await adminClient.GetAsync($"/api/v1/reports/slow-moving-inventory?daysInactive={int.MaxValue}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public async Task ProcurementSpendReport_SumsCorrectlyPerSupplier()
     {
         var adminClient = factory.CreateClient();

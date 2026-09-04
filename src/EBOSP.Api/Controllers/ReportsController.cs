@@ -37,7 +37,9 @@ public sealed class ReportsController(IReportingService reports, ICurrentUserCon
     [HttpGet("slow-moving-inventory")]
     public async Task<ActionResult<PagedResult<SlowMovingInventoryItem>>> SlowMovingInventory(
         [FromQuery] int daysInactive, [FromQuery] PagedRequest request, CancellationToken cancellationToken) =>
-        Ok(await reports.GetSlowMovingInventoryAsync(TenantId, daysInactive <= 0 ? 90 : daysInactive, request, cancellationToken));
+        // Clamped, not just defaulted below zero - an unclamped upper bound (e.g. int.MaxValue)
+        // would overflow DateTimeOffset.AddDays and throw an unhandled 500.
+        Ok(await reports.GetSlowMovingInventoryAsync(TenantId, Math.Clamp(daysInactive <= 0 ? 90 : daysInactive, 1, 3650), request, cancellationToken));
 
     [HttpGet("procurement-spend")]
     public async Task<ActionResult<ProcurementSpendReportResponse>> ProcurementSpend([FromQuery] DateTimeOffset? from, [FromQuery] DateTimeOffset? to, CancellationToken cancellationToken)
