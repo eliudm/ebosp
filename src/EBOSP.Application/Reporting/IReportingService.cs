@@ -16,4 +16,6 @@ public interface IReportingService
     Task<ProcurementSpendReportResponse> GetProcurementSpendReportAsync(Guid tenantId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken);
 
     Task<PagedResult<OutstandingInvoiceItem>> GetOutstandingInvoicesAsync(Guid tenantId, PagedRequest request, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<TopProductItem>> GetTopProductsAsync(Guid tenantId, DateTimeOffset from, DateTimeOffset to, int top, CancellationToken cancellationToken);
 }

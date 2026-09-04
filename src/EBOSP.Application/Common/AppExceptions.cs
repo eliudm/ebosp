@@ -15,6 +15,9 @@ public sealed class ConflictException(string message) : Exception(message);
 
 public sealed class MfaChallengeRequiredException() : Exception("MFA challenge required.");
 
+/// <summary>A feature is present but not currently usable (e.g. the AI assistant with no configured API key) - distinct from NotFoundException, since the endpoint itself exists.</summary>
+public sealed class ServiceUnavailableException(string message) : Exception(message);
+
 /// <summary>
 /// Translated from EF Core's DbUpdateConcurrencyException at the Infrastructure boundary so the
 /// Application layer never depends on EF Core directly (see AppDbContext.SaveChangesAsync).

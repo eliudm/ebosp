@@ -143,4 +143,31 @@ public sealed class ReportingRepository(AppDbContext context, IClock clock) : IR
 
         return new PagedResult<OutstandingInvoiceItem> { Items = items, Page = request.Page, PageSize = request.PageSize, TotalCount = totalCount };
     }
+
+    public async Task<IReadOnlyList<TopProductItem>> GetTopProductsAsync(Guid tenantId, DateTimeOffset from, DateTimeOffset to, int top, CancellationToken cancellationToken)
+    {
+        var linesInRange = context.SalesOrderLines
+            .Where(l => l.TenantId == tenantId)
+            .Join(
+                context.SalesOrders.Where(o => o.TenantId == tenantId && o.CreatedAt >= from && o.CreatedAt <= to),
+                l => l.SalesOrderId,
+                o => o.Id,
+                (l, o) => l);
+
+        var grouped = await linesInRange
+            .GroupBy(l => l.ProductId)
+            .Select(g => new { ProductId = g.Key, QuantitySold = g.Sum(l => l.Quantity), Revenue = g.Sum(l => l.Quantity * l.UnitPrice) })
+            .OrderByDescending(x => x.Revenue)
+            .Take(top)
+            .ToListAsync(cancellationToken);
+
+        var productIds = grouped.Select(x => x.ProductId).ToList();
+        var productNames = await context.Products
+            .Where(p => p.TenantId == tenantId && productIds.Contains(p.Id))
+            .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
+
+        return grouped
+            .Select(x => new TopProductItem(x.ProductId, productNames.GetValueOrDefault(x.ProductId, "Unknown"), x.QuantitySold, x.Revenue))
+            .ToList();
+    }
 }

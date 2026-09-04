@@ -9,4 +9,8 @@ public sealed class TestCurrentUserContext : ICurrentUserContext
     public Guid? UserId { get; set; }
 
     public Guid? TenantId { get; set; }
+
+    public HashSet<string> Permissions { get; } = [];
+
+    public bool HasPermission(string permissionCode) => Permissions.Contains(permissionCode);
 }

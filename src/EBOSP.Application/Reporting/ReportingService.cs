@@ -23,4 +23,7 @@ public sealed class ReportingService(IReportingRepository reports) : IReportingS
 
     public Task<PagedResult<OutstandingInvoiceItem>> GetOutstandingInvoicesAsync(Guid tenantId, PagedRequest request, CancellationToken cancellationToken) =>
         reports.GetOutstandingInvoicesAsync(tenantId, request, cancellationToken);
+
+    public Task<IReadOnlyList<TopProductItem>> GetTopProductsAsync(Guid tenantId, DateTimeOffset from, DateTimeOffset to, int top, CancellationToken cancellationToken) =>
+        reports.GetTopProductsAsync(tenantId, from, to, top, cancellationToken);
 }

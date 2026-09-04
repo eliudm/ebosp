@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using EBOSP.Application.Authorization;
 using EBOSP.Application.Common;
 
 namespace EBOSP.Api.Common;
@@ -16,6 +17,8 @@ public sealed class HttpCurrentUserContext(IHttpContextAccessor httpContextAcces
     public Guid? UserId => TryGetClaimGuid(ClaimTypes.NameIdentifier);
 
     public Guid? TenantId => TryGetClaimGuid("tenant_id");
+
+    public bool HasPermission(string permissionCode) => Principal?.HasClaim(PermissionClaimTypes.Permission, permissionCode) ?? false;
 
     private Guid? TryGetClaimGuid(string claimType)
     {

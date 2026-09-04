@@ -11,4 +11,13 @@ public interface ICurrentUserContext
     bool IsAuthenticated { get; }
     Guid? UserId { get; }
     Guid? TenantId { get; }
+
+    /// <summary>
+    /// Whether the current principal holds the given permission claim (the same claim
+    /// <c>PermissionAuthorizationHandler</c> checks for policy-based authorization) - needed by
+    /// code that must enforce a permission without an ASP.NET Core <c>[Authorize(Policy=...)]</c>
+    /// to lean on, e.g. the AI assistant choosing which tools to even offer the model (dev guide
+    /// §43: "AI receives only data the requesting user is already permitted to see").
+    /// </summary>
+    bool HasPermission(string permissionCode);
 }

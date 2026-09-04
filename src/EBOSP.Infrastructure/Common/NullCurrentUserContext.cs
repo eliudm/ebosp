@@ -15,4 +15,6 @@ public sealed class NullCurrentUserContext : ICurrentUserContext
     public Guid? UserId => null;
 
     public Guid? TenantId => null;
+
+    public bool HasPermission(string permissionCode) => false;
 }
