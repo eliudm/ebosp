@@ -1,6 +1,7 @@
 using EBOSP.Application.Common;
 using EBOSP.Application.MasterData;
 using EBOSP.Application.Procurement;
+using EBOSP.Application.Security;
 using EBOSP.Contracts.Common;
 using EBOSP.Contracts.Inventory;
 using EBOSP.Domain.Identity;
@@ -19,6 +20,7 @@ public sealed class InventoryService(
     IWarehouseRepository warehouses,
     IProductRepository products,
     IPurchaseOrderRepository purchaseOrders,
+    ISecurityAlertRepository securityAlerts,
     IDomainEventRecorder events,
     IUnitOfWork unitOfWork,
     IClock clock,
@@ -134,10 +136,22 @@ public sealed class InventoryService(
 
         // The caller-side permission check (inventory.adjust.large) already happened before this
         // method was invoked - this is the corresponding "+ alert" half of spec §16's "Manager
-        // approval + alert" response.
+        // approval + alert" response (M8: now a real, actionable SecurityAlert, not just the outbox
+        // event below).
         if (Math.Abs(request.QuantityDelta) > options.LargeAdjustmentThreshold)
         {
             events.Record("StockAdjustmentFlagged", tenantId, nameof(StockAdjustment), adjustment.Id.ToString(), new { request.WarehouseId, request.ProductId, request.QuantityDelta }, actorId: actingUserId);
+            await securityAlerts.AddAsync(
+                SecurityAlert.Raise(
+                    tenantId,
+                    "LargeStockAdjustment",
+                    SecurityAlertSeverity.Critical,
+                    $"Stock adjustment of {request.QuantityDelta} exceeded the configured threshold.",
+                    now,
+                    relatedActorId: actingUserId,
+                    relatedAggregateType: nameof(StockAdjustment),
+                    relatedAggregateId: adjustment.Id.ToString()),
+                cancellationToken);
         }
 
         var before = 0;

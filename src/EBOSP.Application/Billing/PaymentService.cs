@@ -1,4 +1,5 @@
 using EBOSP.Application.Common;
+using EBOSP.Application.Security;
 using EBOSP.Contracts.Billing;
 using EBOSP.Contracts.Common;
 using EBOSP.Domain.Identity;
@@ -13,9 +14,11 @@ namespace EBOSP.Application.Billing;
 public sealed class PaymentService(
     IPaymentRepository payments,
     IInvoiceRepository invoices,
+    ISecurityAlertRepository securityAlerts,
     IDomainEventRecorder events,
     IUnitOfWork unitOfWork,
-    IClock clock) : IPaymentService
+    IClock clock,
+    BillingOptions options) : IPaymentService
 {
     public async Task<PaymentResponse> CreateAsync(Guid tenantId, Guid actingUserId, CreatePaymentRequest request, CancellationToken cancellationToken)
     {
@@ -51,8 +54,28 @@ public sealed class PaymentService(
         var invoice = await invoices.GetByIdAsync(tenantId, payment.InvoiceId, cancellationToken)
                       ?? throw new NotFoundException("Invoice not found.");
 
-        payment.Confirm(actingUserId, clock.UtcNow);
+        var now = clock.UtcNow;
+        payment.Confirm(actingUserId, now);
         events.Record("PaymentReceived", tenantId, nameof(Payment), payment.Id.ToString(), new { payment.InvoiceId, payment.Amount }, actorId: actingUserId);
+
+        // The caller-side permission check (payment.create.large) already happened before this
+        // method was invoked - this is the corresponding "+ alert" half of spec §16's "Unusual
+        // payment... Finance review" response, same split as InventoryService.AdjustAsync's
+        // StockAdjustmentFlagged/LargeStockAdjustment alert.
+        if (payment.Amount > options.LargePaymentThreshold)
+        {
+            await securityAlerts.AddAsync(
+                SecurityAlert.Raise(
+                    tenantId,
+                    "UnusualPayment",
+                    SecurityAlertSeverity.Critical,
+                    $"Payment of {payment.Amount} exceeded the configured threshold.",
+                    now,
+                    relatedActorId: actingUserId,
+                    relatedAggregateType: nameof(Payment),
+                    relatedAggregateId: payment.Id.ToString()),
+                cancellationToken);
+        }
 
         // Invoice.PaidTotal is guarded by Postgres's xmin as a real EF Core concurrency token (same
         // mechanism as StockBalance in M4) - two payments confirmed concurrently against the same

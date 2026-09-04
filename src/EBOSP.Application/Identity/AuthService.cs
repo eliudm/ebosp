@@ -1,4 +1,5 @@
 using EBOSP.Application.Common;
+using EBOSP.Application.Security;
 using EBOSP.Contracts.Identity;
 using EBOSP.Domain.Identity;
 
@@ -12,6 +13,7 @@ public sealed class AuthService(
     IPasswordHasher passwordHasher,
     IJwtTokenService jwtTokenService,
     IMfaChallengeProvider mfaChallengeProvider,
+    ISecurityAlertRepository securityAlerts,
     IDomainEventRecorder events,
     IUnitOfWork unitOfWork,
     IClock clock,
@@ -56,6 +58,27 @@ public sealed class AuthService(
         if (verification == PasswordVerificationResult.Failed)
         {
             user.RecordFailedLogin(now);
+
+            // The "account locked" branch above short-circuits every later attempt before it ever
+            // reaches RecordFailedLogin again, so reaching here with a newly-true IsLockedOut means
+            // this exact failure is the one that just tripped it - not a re-raise on every
+            // subsequent attempt against an already-locked account (spec §16: "Repeated login
+            // failures - 10 failures within configured window - Rate limit + alert").
+            if (user.IsLockedOut(now))
+            {
+                await securityAlerts.AddAsync(
+                    SecurityAlert.Raise(
+                        user.TenantId,
+                        "RepeatedLoginFailures",
+                        SecurityAlertSeverity.High,
+                        "Account locked after repeated failed login attempts.",
+                        now,
+                        relatedActorId: user.Id,
+                        relatedAggregateType: nameof(User),
+                        relatedAggregateId: user.Id.ToString()),
+                    cancellationToken);
+            }
+
             await RecordLoginFailedAsync(user, "invalid credentials", cancellationToken);
             throw new AuthenticationFailedException();
         }
