@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\EBOSP.Api\EBOSP.Api.csproj" />
+    <ProjectReference Include="..\EBOSP.ApiTests\EBOSP.ApiTests.csproj" />
   </ItemGroup>
 
 </Project>
