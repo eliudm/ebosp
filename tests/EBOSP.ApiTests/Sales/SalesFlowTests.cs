@@ -184,6 +184,51 @@ public class SalesFlowTests(CustomWebApplicationFactory factory) : IClassFixture
     }
 
     [Fact]
+    public async Task CreateSalesOrder_ConcurrentConversionOfSameQuotation_LoserReleasesItsReservations()
+    {
+        // Regression test for a hardening-review finding: the compensation try/catch originally only
+        // wrapped the reservation loop, not the final SaveChangesAsync - so the loser of this race
+        // (which reserves stock successfully but then loses the SalesOrder(TenantId, QuotationId)
+        // unique-index race at save time) left its reservations orphaned forever.
+        var adminClient = factory.CreateClient();
+        var admin = await AuthTestHelpers.CreateTenantAdminAsync(adminClient);
+        AuthTestHelpers.AuthorizeAs(adminClient, admin.Tokens);
+        var (branchId, warehouseId, productId) = await ProcurementTestHelpers.CreateBranchWarehouseAndProductAsync(adminClient);
+        await ReceiveAsync(adminClient, warehouseId, productId, 100);
+        var customerId = await SalesTestHelpers.CreateCustomerAsync(adminClient);
+
+        var quoteResponse = await adminClient.PostAsJsonAsync("/api/v1/quotations", new CreateQuotationRequest
+        {
+            CustomerId = customerId,
+            BranchId = branchId,
+            Lines = [new CreateQuotationLine { ProductId = productId, Quantity = 10, UnitPrice = 1m }],
+        });
+        var quotation = (await quoteResponse.Content.ReadFromJsonAsync<QuotationResponse>())!;
+        (await adminClient.PostAsJsonAsync($"/api/v1/quotations/{quotation.Id}/accept", (object?)null)).EnsureSuccessStatusCode();
+
+        var request = new CreateSalesOrderRequest { QuotationId = quotation.Id, WarehouseId = warehouseId };
+        var tasks = Enumerable.Range(0, 2).Select(_ =>
+        {
+            var client = factory.CreateClient();
+            AuthTestHelpers.AuthorizeAs(client, admin.Tokens);
+            return client.PostAsJsonAsync("/api/v1/sales-orders", request);
+        });
+        var responses = await Task.WhenAll(tasks);
+
+        Assert.Single(responses, r => r.StatusCode == HttpStatusCode.Created);
+
+        var listResponse = await adminClient.GetAsync("/api/v1/sales-orders");
+        var orders = (await listResponse.Content.ReadFromJsonAsync<PagedResult<SalesOrderResponse>>())!;
+        Assert.Single(orders.Items, o => o.QuotationId == quotation.Id);
+
+        // Only the winner's reservation should still be active - the loser's must have been released,
+        // not left orphaned.
+        var balance = await GetBalanceAsync(adminClient, warehouseId, productId);
+        Assert.Equal(10, balance.QuantityReserved);
+        Assert.Equal(90, balance.QuantityAvailable);
+    }
+
+    [Fact]
     public async Task CreateDelivery_AgainstNonOpenOrder_Returns409()
     {
         var adminClient = factory.CreateClient();

@@ -48,7 +48,13 @@ public sealed class SalesOrderService(
         }
 
         // Credit exposure is approximated from open sales order totals - there is no Invoice/Payment
-        // yet (Billing + payments is a later phase) to know what's actually still owed.
+        // yet (Billing + payments is a later phase) to know what's actually still owed. Accepted,
+        // narrow race: two concurrent CreateAsync calls for the same customer (different quotations)
+        // can each read this sum before either commits, so both could pass under the limit even
+        // though their combined total exceeds it. Fixing this would need row-level locking (e.g.
+        // SELECT ... FOR UPDATE on the customer) - a concurrency-control pattern not used anywhere
+        // else in this codebase - for a business control neither governing doc requires be strictly
+        // serialized; left as a documented gap rather than introduced here.
         var committedTotal = await salesOrders.SumOpenTotalsForCustomerAsync(tenantId, customer.Id, cancellationToken);
         if (committedTotal + quotation.Total > customer.CreditLimit)
         {
@@ -57,6 +63,13 @@ public sealed class SalesOrderService(
 
         _ = await warehouses.GetByIdAsync(tenantId, request.WarehouseId, cancellationToken) ?? throw new NotFoundException("Warehouse not found.");
 
+        // The whole block below - reservations *and* the final SaveChangesAsync - is compensated on
+        // any failure. Each ReserveAsync call commits independently, so by the time SalesOrder itself
+        // is saved, every line's reservation is already durable; if that final save fails for any
+        // reason (e.g. a concurrent duplicate conversion of the same quotation losing the race against
+        // the SalesOrder(TenantId, QuotationId) unique index), those reservations must still be
+        // released here - they were previously left orphaned because the catch only wrapped the
+        // reservation loop, not the save.
         var reservedLines = new List<(Guid ProductId, int Quantity, decimal UnitPrice, Guid ReservationId)>();
         try
         {
@@ -68,9 +81,24 @@ public sealed class SalesOrderService(
                     cancellationToken);
                 reservedLines.Add((line.ProductId, line.Quantity, line.UnitPrice, reservation.Id));
             }
+
+            var order = SalesOrder.Create(tenantId, quotation.Id, quotation.CustomerId, quotation.BranchId, request.WarehouseId, actingUserId, clock.UtcNow, reservedLines);
+            await salesOrders.AddAsync(order, cancellationToken);
+
+            events.Record("SalesOrderCreated", tenantId, nameof(SalesOrder), order.Id.ToString(), new { order.CustomerId, order.WarehouseId, order.Total }, actorId: actingUserId);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return ToResponse(order);
         }
         catch
         {
+            // A failed SaveChangesAsync (e.g. the SalesOrder insert losing a concurrent duplicate-
+            // conversion race against the unique index) leaves that SalesOrder still tracked as
+            // pending-Added on this request's scoped DbContext - without discarding it first, the
+            // release calls below would retry saving it too and fail the same way again, never
+            // actually releasing anything.
+            unitOfWork.DiscardChanges();
+
             // Best-effort compensation: undo every reservation this request already made before the
             // failure, rather than leaving them orphaned against a sales order that never gets created.
             foreach (var (_, _, _, reservationId) in reservedLines)
@@ -80,14 +108,6 @@ public sealed class SalesOrderService(
 
             throw;
         }
-
-        var order = SalesOrder.Create(tenantId, quotation.Id, quotation.CustomerId, quotation.BranchId, request.WarehouseId, actingUserId, clock.UtcNow, reservedLines);
-        await salesOrders.AddAsync(order, cancellationToken);
-
-        events.Record("SalesOrderCreated", tenantId, nameof(SalesOrder), order.Id.ToString(), new { order.CustomerId, order.WarehouseId, order.Total }, actorId: actingUserId);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return ToResponse(order);
     }
 
     public async Task<SalesOrderResponse> GetByIdAsync(Guid tenantId, Guid id, CancellationToken cancellationToken) =>

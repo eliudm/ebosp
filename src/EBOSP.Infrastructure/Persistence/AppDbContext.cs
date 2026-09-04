@@ -498,4 +498,6 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             throw new ConcurrencyConflictException(ex);
         }
     }
+
+    public void DiscardChanges() => ChangeTracker.Clear();
 }
