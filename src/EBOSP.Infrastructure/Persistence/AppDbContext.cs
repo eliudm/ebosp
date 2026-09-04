@@ -94,6 +94,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
 
     public DbSet<SecurityAlert> SecurityAlerts => Set<SecurityAlert>();
 
+    public DbSet<Notification> Notifications => Set<Notification>();
+
+    public DbSet<Document> Documents => Set<Document>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -535,6 +539,33 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
             entity.Property(e => e.ResolutionNotes).HasMaxLength(1000);
             entity.HasIndex(e => e.TenantId);
             entity.HasIndex(e => new { e.TenantId, e.Status });
+        });
+
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.ToTable("notifications");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Body).HasMaxLength(1000);
+            entity.Property(e => e.RelatedAggregateType).HasMaxLength(200);
+            entity.Property(e => e.RelatedAggregateId).HasMaxLength(200);
+            entity.HasIndex(e => new { e.TenantId, e.RecipientUserId });
+            // Backs the outbox background processor's idempotent-consumer guarantee (dev guide
+            // §19.2: "assume at-least-once delivery... never assume a message is delivered exactly
+            // once") - the same outbox row must never produce two Notification rows.
+            entity.HasIndex(e => new { e.TenantId, e.SourceOutboxMessageId }).IsUnique();
+        });
+
+        modelBuilder.Entity<Document>(entity =>
+        {
+            entity.ToTable("documents");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EntityType).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.EntityId).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.FileName).HasMaxLength(260).IsRequired();
+            entity.Property(e => e.ContentType).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.StorageKey).HasMaxLength(260).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.EntityType, e.EntityId });
         });
 
         // Tenant isolation is enforced here, not left to each query author (spec §12).
