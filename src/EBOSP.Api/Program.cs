@@ -14,6 +14,7 @@ using EBOSP.Application.MasterData;
 using EBOSP.Application.Billing;
 using EBOSP.Application.Notifications;
 using EBOSP.Application.Procurement;
+using EBOSP.Application.Reporting;
 using EBOSP.Application.Sales;
 using EBOSP.Application.Security;
 using EBOSP.Infrastructure.Audit;
@@ -26,6 +27,7 @@ using EBOSP.Infrastructure.MasterData;
 using EBOSP.Infrastructure.Notifications;
 using EBOSP.Infrastructure.Outbox;
 using EBOSP.Infrastructure.Procurement;
+using EBOSP.Infrastructure.Reporting;
 using EBOSP.Infrastructure.Sales;
 using EBOSP.Infrastructure.Security;
 using EBOSP.Infrastructure.Persistence;
@@ -257,6 +259,9 @@ var documentOptions = new DocumentOptions
 builder.Services.AddSingleton(documentOptions);
 builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
+
+builder.Services.AddScoped<IReportingRepository, ReportingRepository>();
+builder.Services.AddScoped<IReportingService, ReportingService>();
 
 builder.Services
     .AddHealthChecks()
