@@ -1,3 +1,4 @@
+using EBOSP.Application.Assistant;
 using EBOSP.Application.Identity;
 using EBOSP.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
@@ -26,7 +27,17 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     /// </summary>
     public CapturingPasswordResetNotifier PasswordResetNotifier { get; } = new();
 
+    /// <summary>Swaps out the real/unavailable IAiCompletionClient so assistant tests never call the real Anthropic API - see <see cref="FakeAiCompletionClient"/>.</summary>
+    public FakeAiCompletionClient AiCompletionClient { get; } = new();
+
     protected virtual bool DisableRateLimiting => true;
+
+    /// <summary>
+    /// True in every factory except <see cref="AiUnavailableWebApplicationFactory"/>, which needs
+    /// Program.cs's own real (Ai:ApiKey-unset) IAiCompletionClient resolution left untouched to
+    /// prove the 503 path actually works, not just that the fake client stands in for it.
+    /// </summary>
+    protected virtual bool RegisterFakeAiClient => true;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -54,7 +65,14 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             config.AddInMemoryCollection(settings);
         });
 
-        builder.ConfigureServices(services => services.AddSingleton<IPasswordResetNotifier>(PasswordResetNotifier));
+        builder.ConfigureServices(services =>
+        {
+            services.AddSingleton<IPasswordResetNotifier>(PasswordResetNotifier);
+            if (RegisterFakeAiClient)
+            {
+                services.AddSingleton<IAiCompletionClient>(AiCompletionClient);
+            }
+        });
     }
 
     public async Task InitializeAsync()

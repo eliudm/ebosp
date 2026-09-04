@@ -42,6 +42,27 @@ public class ReportsFlowTests(CustomWebApplicationFactory factory) : IClassFixtu
     }
 
     [Fact]
+    public async Task TopProductsReport_OrdersByRevenueDescending()
+    {
+        var adminClient = factory.CreateClient();
+        var admin = await AuthTestHelpers.CreateTenantAdminAsync(adminClient);
+        AuthTestHelpers.AuthorizeAs(adminClient, admin.Tokens);
+        var (branchId, warehouseId, highRevenueProductId) = await ProcurementTestHelpers.CreateBranchWarehouseAndProductAsync(adminClient);
+        var lowRevenueProductId = await CreateProductWithReorderLevelAsync(adminClient, reorderLevel: 0);
+        await BillingTestHelpers.CreateFulfilledSalesOrderAsync(adminClient, branchId, warehouseId, highRevenueProductId, quantity: 10, unitPrice: 50m); // 500
+        await BillingTestHelpers.CreateFulfilledSalesOrderAsync(adminClient, branchId, warehouseId, lowRevenueProductId, quantity: 2, unitPrice: 5m); // 10
+
+        var response = await adminClient.GetAsync("/api/v1/reports/top-products?top=5");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var items = (await response.Content.ReadFromJsonAsync<List<TopProductItem>>())!;
+        Assert.Equal(highRevenueProductId, items[0].ProductId);
+        Assert.Equal(500m, items[0].Revenue);
+        Assert.Equal(10, items[0].QuantitySold);
+        Assert.Contains(items, i => i.ProductId == lowRevenueProductId && i.Revenue == 10m);
+    }
+
+    [Fact]
     public async Task LowStockReport_IncludesBalanceBelowLevelAndExcludesBalanceAboveLevel()
     {
         var adminClient = factory.CreateClient();
