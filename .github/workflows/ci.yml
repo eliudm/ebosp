@@ -68,6 +68,29 @@ jobs:
           path: coverage
           retention-days: 14
 
+      # Turns the raw per-project Cobertura XML above into one aggregated, human-readable report
+      # (dev guide §31 gate 9: "generate coverage report" - collection alone isn't a report).
+      - name: Aggregate coverage report
+        if: always()
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator \
+            -reports:"coverage/**/coverage.cobertura.xml" \
+            -targetdir:"coverage-report" \
+            -reporttypes:"Html;MarkdownSummaryGithub"
+          if [ -f coverage-report/SummaryGithub.md ]; then
+            cat coverage-report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+        shell: bash
+
+      - name: Upload aggregated coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: coverage-report
+          retention-days: 14
+
       - name: Dependency vulnerability scan
         run: |
           set -euo pipefail
@@ -114,6 +137,41 @@ jobs:
           name: frontend-dist
           path: frontend/dist
           retention-days: 14
+
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [csharp, javascript-typescript]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        if: matrix.language == 'csharp'
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      # C# needs an actual build to analyze; the JS/TS analysis is build-free (autobuild is a no-op
+      # for it and would otherwise try, and fail, to build the .NET solution too).
+      - name: Build backend
+        if: matrix.language == 'csharp'
+        run: dotnet build EBOSP.slnx -c Release
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
 
   secret-scan:
     name: Secret scan
@@ -168,8 +226,8 @@ jobs:
   publish-artifacts:
     name: Publish artifacts
     runs-on: ubuntu-latest
-    needs: [backend, frontend, secret-scan, container-scan]
+    needs: [backend, frontend, codeql, secret-scan, container-scan]
     if: success()
     steps:
       - name: All mandatory gates passed
-        run: echo "Backend, frontend, secret scan and container scans all passed - artifacts above are the release candidate."
+        run: echo "Backend, frontend, CodeQL, secret scan and container scans all passed - artifacts above are the release candidate."
