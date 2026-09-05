@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { DataTable } from '../../components/DataTable'
 import { Modal } from '../../components/Modal'
-import { ApiError } from '../../services/apiClient'
+import { getErrorMessage } from '../../services/apiClient'
 import { createProduct, listProducts } from '../../services/masterDataApi'
 import type { ProductResponse } from '../../types/masterData'
 import { formatCurrency } from '../../utils/format'
@@ -82,7 +82,7 @@ function CreateProductModal({ onClose, onCreated }: { onClose: () => void; onCre
       })
       onCreated()
     } catch (err) {
-      setError(err instanceof ApiError && err.problem?.detail ? err.problem.detail : 'Could not create the product.')
+      setError(getErrorMessage(err, 'Could not create the product.'))
     } finally {
       setIsSubmitting(false)
     }

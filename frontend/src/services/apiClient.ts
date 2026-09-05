@@ -21,6 +21,19 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * GlobalExceptionHandler (src/EBOSP.Api/Middleware/GlobalExceptionHandler.cs) puts every typed
+ * exception's actual message into ProblemDetails.Title, never .Detail (which this backend never
+ * populates at all) - use this everywhere instead of reading .detail directly, so that mistake
+ * doesn't get re-copied into every new form.
+ */
+export function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError && err.problem?.title) {
+    return err.problem.title
+  }
+  return fallback
+}
+
 interface RequestOptions {
   method?: string
   body?: unknown

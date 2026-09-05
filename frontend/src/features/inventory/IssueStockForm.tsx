@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
-import { ApiError } from '../../services/apiClient'
+import { getErrorMessage } from '../../services/apiClient'
 import { issueStock } from '../../services/inventoryApi'
 import { ProductSelect, QuantityInput, WarehouseSelect } from './ReceiveStockForm'
 
@@ -28,7 +28,7 @@ export function IssueStockForm({ warehouseNames, productNames, onClose, onSucces
       await issueStock({ warehouseId, productId, quantity: Number(quantity), reason: reason || undefined, idempotencyKey: crypto.randomUUID() })
       onSuccess()
     } catch (err) {
-      setError(err instanceof ApiError && err.problem?.detail ? err.problem.detail : 'Could not issue stock.')
+      setError(getErrorMessage(err, 'Could not issue stock.'))
     } finally {
       setIsSubmitting(false)
     }

@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
-import { ApiError } from '../../services/apiClient'
+import { getErrorMessage } from '../../services/apiClient'
 import { receiveStock } from '../../services/inventoryApi'
+import { listPurchaseOrders } from '../../services/procurementApi'
+import type { PurchaseOrderResponse } from '../../types/procurement'
 
 interface Props {
   warehouseNames: Map<string, string>
@@ -15,8 +17,14 @@ export function ReceiveStockForm({ warehouseNames, productNames, onClose, onSucc
   const [warehouseId, setWarehouseId] = useState('')
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState('1')
+  const [purchaseOrderId, setPurchaseOrderId] = useState('')
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderResponse[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    listPurchaseOrders({ pageSize: 100 }).then((result) => setPurchaseOrders(result.items))
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -25,12 +33,13 @@ export function ReceiveStockForm({ warehouseNames, productNames, onClose, onSucc
     try {
       await receiveStock({
         warehouseId,
+        purchaseOrderId: purchaseOrderId || undefined,
         lines: [{ productId, quantity: Number(quantity) }],
         idempotencyKey: crypto.randomUUID(),
       })
       onSuccess()
     } catch (err) {
-      setError(err instanceof ApiError && err.problem?.detail ? err.problem.detail : 'Could not receive stock.')
+      setError(getErrorMessage(err, 'Could not receive stock.'))
     } finally {
       setIsSubmitting(false)
     }
@@ -42,6 +51,21 @@ export function ReceiveStockForm({ warehouseNames, productNames, onClose, onSucc
         <WarehouseSelect value={warehouseId} onChange={setWarehouseId} names={warehouseNames} />
         <ProductSelect value={productId} onChange={setProductId} names={productNames} />
         <QuantityInput value={quantity} onChange={setQuantity} />
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-500">Purchase order (optional)</label>
+          <select
+            value={purchaseOrderId}
+            onChange={(event) => setPurchaseOrderId(event.target.value)}
+            className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+          >
+            <option value="">Not linked to a purchase order</option>
+            {purchaseOrders.map((order) => (
+              <option key={order.id} value={order.id}>
+                {order.poNumber}
+              </option>
+            ))}
+          </select>
+        </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"

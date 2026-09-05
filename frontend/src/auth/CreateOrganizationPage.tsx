@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createTenant } from '../services/identityApi'
-import { ApiError } from '../services/apiClient'
+import { getErrorMessage } from '../services/apiClient'
 
 /** Self-service tenant onboarding (spec §30: "a new tenant can be created and isolated from other tenants"). */
 export function CreateOrganizationPage() {
@@ -22,7 +22,7 @@ export function CreateOrganizationPage() {
       await createTenant({ tenantName, adminEmail, adminPassword })
       navigate('/login', { replace: true })
     } catch (err) {
-      setError(err instanceof ApiError && err.problem?.detail ? err.problem.detail : 'Could not create the organization.')
+      setError(getErrorMessage(err, 'Could not create the organization.'))
     } finally {
       setIsSubmitting(false)
     }

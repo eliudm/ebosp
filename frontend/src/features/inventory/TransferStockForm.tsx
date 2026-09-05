@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
-import { ApiError } from '../../services/apiClient'
+import { getErrorMessage } from '../../services/apiClient'
 import { transferStock } from '../../services/inventoryApi'
 import { ProductSelect, QuantityInput, WarehouseSelect } from './ReceiveStockForm'
 
@@ -36,7 +36,7 @@ export function TransferStockForm({ warehouseNames, productNames, onClose, onSuc
       })
       onSuccess()
     } catch (err) {
-      setError(err instanceof ApiError && err.problem?.detail ? err.problem.detail : 'Could not transfer stock.')
+      setError(getErrorMessage(err, 'Could not transfer stock.'))
     } finally {
       setIsSubmitting(false)
     }

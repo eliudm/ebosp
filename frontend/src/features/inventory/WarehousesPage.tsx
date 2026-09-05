@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { DataTable } from '../../components/DataTable'
 import { Modal } from '../../components/Modal'
-import { ApiError } from '../../services/apiClient'
+import { getErrorMessage } from '../../services/apiClient'
 import { listBranchNames } from '../../services/lookupApi'
 import { createWarehouse, listWarehouses } from '../../services/masterDataApi'
 import type { WarehouseResponse } from '../../types/masterData'
@@ -85,7 +85,7 @@ function CreateWarehouseModal({
       await createWarehouse({ name, branchId })
       onCreated()
     } catch (err) {
-      setError(err instanceof ApiError && err.problem?.detail ? err.problem.detail : 'Could not create the warehouse.')
+      setError(getErrorMessage(err, 'Could not create the warehouse.'))
     } finally {
       setIsSubmitting(false)
     }

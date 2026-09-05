@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
-import { ApiError } from '../../services/apiClient'
+import { ApiError, getErrorMessage } from '../../services/apiClient'
 import { adjustStock } from '../../services/inventoryApi'
 import { ProductSelect, WarehouseSelect } from './ReceiveStockForm'
 
@@ -33,7 +33,7 @@ export function AdjustStockForm({ warehouseNames, productNames, onClose, onSucce
         // base one - see InventoryController.Adjust's imperative check, never hardcoded here.
         setError('This adjustment is large enough to need additional permission, which this account does not have.')
       } else {
-        setError(err instanceof ApiError && err.problem?.detail ? err.problem.detail : 'Could not adjust stock.')
+        setError(getErrorMessage(err, 'Could not adjust stock.'))
       }
     } finally {
       setIsSubmitting(false)

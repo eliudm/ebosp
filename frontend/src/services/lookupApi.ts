@@ -34,3 +34,7 @@ export function listCustomerNames(): Promise<Map<string, string>> {
 export function listBranchNames(): Promise<Map<string, string>> {
   return listNames('/api/v1/branches')
 }
+
+export function listSupplierNames(): Promise<Map<string, string>> {
+  return listNames('/api/v1/suppliers')
+}

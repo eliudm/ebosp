@@ -21,6 +21,10 @@ import { LedgerPage } from '../features/inventory/LedgerPage'
 import { ProductsPage } from '../features/inventory/ProductsPage'
 import { WarehousesPage } from '../features/inventory/WarehousesPage'
 import { BranchesPage } from '../features/inventory/BranchesPage'
+import { ProcurementLayout } from '../features/procurement/ProcurementLayout'
+import { PurchaseRequestsPage } from '../features/procurement/PurchaseRequestsPage'
+import { PurchaseOrdersPage } from '../features/procurement/PurchaseOrdersPage'
+import { SuppliersPage } from '../features/procurement/SuppliersPage'
 
 function App() {
   return (
@@ -41,6 +45,12 @@ function App() {
                 <Route path="products" element={<ProductsPage />} />
                 <Route path="warehouses" element={<WarehousesPage />} />
                 <Route path="branches" element={<BranchesPage />} />
+              </Route>
+              <Route path="/procurement" element={<ProcurementLayout />}>
+                <Route index element={<Navigate to="/procurement/requests" replace />} />
+                <Route path="requests" element={<PurchaseRequestsPage />} />
+                <Route path="orders" element={<PurchaseOrdersPage />} />
+                <Route path="suppliers" element={<SuppliersPage />} />
               </Route>
               <Route path="/reports" element={<ReportsLayout />}>
                 <Route index element={<Navigate to="/reports/sales" replace />} />

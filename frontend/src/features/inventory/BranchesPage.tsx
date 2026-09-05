@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { DataTable } from '../../components/DataTable'
 import { Modal } from '../../components/Modal'
-import { ApiError } from '../../services/apiClient'
+import { getErrorMessage } from '../../services/apiClient'
 import { createBranch, listBranches } from '../../services/masterDataApi'
 import type { BranchResponse } from '../../types/masterData'
 
@@ -68,7 +68,7 @@ function CreateBranchModal({ onClose, onCreated }: { onClose: () => void; onCrea
       await createBranch({ name })
       onCreated()
     } catch (err) {
-      setError(err instanceof ApiError && err.problem?.detail ? err.problem.detail : 'Could not create the branch.')
+      setError(getErrorMessage(err, 'Could not create the branch.'))
     } finally {
       setIsSubmitting(false)
     }
