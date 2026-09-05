@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { DataTable } from '../../components/DataTable'
+import { DocumentsModal } from '../../components/DocumentsModal'
 import { Modal } from '../../components/Modal'
 import { getErrorMessage } from '../../services/apiClient'
 import { listCustomerNames } from '../../services/lookupApi'
@@ -14,6 +15,7 @@ export function InvoicesPage() {
   const [fulfilledOrders, setFulfilledOrders] = useState<SalesOrderResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [documentsFor, setDocumentsFor] = useState<InvoiceResponse | null>(null)
 
   function reload() {
     setIsLoading(true)
@@ -49,12 +51,24 @@ export function InvoicesPage() {
           { header: 'Customer', render: (row: InvoiceResponse) => customerNames.get(row.customerId) ?? row.customerId },
           { header: 'Total', render: (row: InvoiceResponse) => formatCurrency(row.total), align: 'right' },
           { header: 'Status', render: (row: InvoiceResponse) => row.status },
+          {
+            header: 'Documents',
+            render: (row: InvoiceResponse) => (
+              <button type="button" onClick={() => setDocumentsFor(row)} className="text-sm text-violet-600 hover:underline">
+                Documents
+              </button>
+            ),
+            align: 'right',
+          },
         ]}
         rows={invoices}
         keyFor={(row) => row.id}
         isLoading={isLoading}
         emptyMessage="No invoices yet - deliver a sales order first."
       />
+      {documentsFor && (
+        <DocumentsModal entityType="Invoice" entityId={documentsFor.id} title={`invoice ${documentsFor.id.slice(0, 8)}`} onClose={() => setDocumentsFor(null)} />
+      )}
       {isModalOpen && (
         <CreateInvoiceModal
           fulfilledOrders={fulfilledOrders}

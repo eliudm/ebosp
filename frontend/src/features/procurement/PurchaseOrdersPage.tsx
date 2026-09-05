@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { DataTable } from '../../components/DataTable'
+import { DocumentsModal } from '../../components/DocumentsModal'
 import { Modal } from '../../components/Modal'
 import { getErrorMessage } from '../../services/apiClient'
 import { listProductNames, listSupplierNames } from '../../services/lookupApi'
@@ -17,6 +18,7 @@ export function PurchaseOrdersPage() {
   const [approvedRequests, setApprovedRequests] = useState<PurchaseRequestResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [documentsFor, setDocumentsFor] = useState<PurchaseOrderResponse | null>(null)
 
   function reload() {
     setIsLoading(true)
@@ -54,12 +56,24 @@ export function PurchaseOrdersPage() {
           { header: 'Supplier', render: (row: PurchaseOrderResponse) => supplierNames.get(row.supplierId) ?? row.supplierId },
           { header: 'Status', render: (row: PurchaseOrderResponse) => row.status },
           { header: 'Total', render: (row: PurchaseOrderResponse) => formatCurrency(row.total), align: 'right' },
+          {
+            header: 'Documents',
+            render: (row: PurchaseOrderResponse) => (
+              <button type="button" onClick={() => setDocumentsFor(row)} className="text-sm text-violet-600 hover:underline">
+                Documents
+              </button>
+            ),
+            align: 'right',
+          },
         ]}
         rows={orders}
         keyFor={(row) => row.id}
         isLoading={isLoading}
         emptyMessage="No purchase orders yet - approve a purchase request first."
       />
+      {documentsFor && (
+        <DocumentsModal entityType="PurchaseOrder" entityId={documentsFor.id} title={documentsFor.poNumber} onClose={() => setDocumentsFor(null)} />
+      )}
       {isModalOpen && (
         <CreatePurchaseOrderModal
           approvedRequests={approvedRequests}
