@@ -27,34 +27,40 @@ export function PasswordResetConfirmPage() {
   }
 
   return (
-    <main>
-      <h1>Set a new password</h1>
-      <form onSubmit={handleSubmit} noValidate>
-        <div>
-          <label htmlFor="token">Reset code</label>
-          <input id="token" name="token" type="text" required value={token} onChange={(event) => setToken(event.target.value)} />
+    <main className="auth-page">
+      <div className="auth-card">
+        <h1>Set a new password</h1>
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="field">
+            <label htmlFor="token">Reset code</label>
+            <input id="token" name="token" type="text" required value={token} onChange={(event) => setToken(event.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="newPassword">New password</label>
+            <input
+              id="newPassword"
+              name="newPassword"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={10}
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+            />
+          </div>
+          {error && (
+            <p role="alert" className="error-text">
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving…' : 'Set new password'}
+          </button>
+        </form>
+        <div className="auth-links">
+          <Link to="/login">Back to sign in</Link>
         </div>
-        <div>
-          <label htmlFor="newPassword">New password</label>
-          <input
-            id="newPassword"
-            name="newPassword"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={10}
-            value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
-          />
-        </div>
-        {error && <p role="alert">{error}</p>}
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving…' : 'Set new password'}
-        </button>
-      </form>
-      <p>
-        <Link to="/login">Back to sign in</Link>
-      </p>
+      </div>
     </main>
   )
 }

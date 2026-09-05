@@ -29,54 +29,60 @@ export function CreateOrganizationPage() {
   }
 
   return (
-    <main>
-      <h1>Create your organization</h1>
-      <form onSubmit={handleSubmit} noValidate>
-        <div>
-          <label htmlFor="tenantName">Organization name</label>
-          <input
-            id="tenantName"
-            name="tenantName"
-            type="text"
-            required
-            minLength={2}
-            value={tenantName}
-            onChange={(event) => setTenantName(event.target.value)}
-          />
+    <main className="auth-page">
+      <div className="auth-card">
+        <h1>Create your organization</h1>
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="field">
+            <label htmlFor="tenantName">Organization name</label>
+            <input
+              id="tenantName"
+              name="tenantName"
+              type="text"
+              required
+              minLength={2}
+              value={tenantName}
+              onChange={(event) => setTenantName(event.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="adminEmail">Your email</label>
+            <input
+              id="adminEmail"
+              name="adminEmail"
+              type="email"
+              autoComplete="email"
+              required
+              value={adminEmail}
+              onChange={(event) => setAdminEmail(event.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="adminPassword">Password</label>
+            <input
+              id="adminPassword"
+              name="adminPassword"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={10}
+              value={adminPassword}
+              onChange={(event) => setAdminPassword(event.target.value)}
+            />
+          </div>
+          {error && (
+            <p role="alert" className="error-text">
+              {error}
+            </p>
+          )}
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating…' : 'Create organization'}
+          </button>
+        </form>
+        <div className="auth-links">
+          <Link to="/login">Already have an account? Sign in</Link>
         </div>
-        <div>
-          <label htmlFor="adminEmail">Your email</label>
-          <input
-            id="adminEmail"
-            name="adminEmail"
-            type="email"
-            autoComplete="email"
-            required
-            value={adminEmail}
-            onChange={(event) => setAdminEmail(event.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="adminPassword">Password</label>
-          <input
-            id="adminPassword"
-            name="adminPassword"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={10}
-            value={adminPassword}
-            onChange={(event) => setAdminPassword(event.target.value)}
-          />
-        </div>
-        {error && <p role="alert">{error}</p>}
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Creating…' : 'Create organization'}
-        </button>
-      </form>
-      <p>
-        <Link to="/login">Already have an account? Sign in</Link>
-      </p>
+      </div>
     </main>
   )
 }
