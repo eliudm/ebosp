@@ -31,6 +31,10 @@ import { QuotationsPage } from '../features/sales/QuotationsPage'
 import { SalesOrdersPage } from '../features/sales/SalesOrdersPage'
 import { DeliveriesPage } from '../features/sales/DeliveriesPage'
 import { InvoicesPage } from '../features/sales/InvoicesPage'
+import { FinanceLayout } from '../features/finance/FinanceLayout'
+import { OutstandingInvoicesPage } from '../features/finance/OutstandingInvoicesPage'
+import { PaymentsPage } from '../features/finance/PaymentsPage'
+import { SummaryPage } from '../features/finance/SummaryPage'
 
 function App() {
   return (
@@ -65,6 +69,12 @@ function App() {
                 <Route path="orders" element={<SalesOrdersPage />} />
                 <Route path="deliveries" element={<DeliveriesPage />} />
                 <Route path="invoices" element={<InvoicesPage />} />
+              </Route>
+              <Route path="/finance" element={<FinanceLayout />}>
+                <Route index element={<Navigate to="/finance/outstanding-invoices" replace />} />
+                <Route path="outstanding-invoices" element={<OutstandingInvoicesPage />} />
+                <Route path="payments" element={<PaymentsPage />} />
+                <Route path="summary" element={<SummaryPage />} />
               </Route>
               <Route path="/reports" element={<ReportsLayout />}>
                 <Route index element={<Navigate to="/reports/sales" replace />} />

@@ -6,6 +6,7 @@ const navItems = [
   { to: '/inventory', label: 'Inventory', end: false },
   { to: '/procurement', label: 'Procurement', end: false },
   { to: '/sales', label: 'Sales', end: false },
+  { to: '/finance', label: 'Finance', end: false },
   { to: '/reports', label: 'Reports', end: false },
 ]
 
