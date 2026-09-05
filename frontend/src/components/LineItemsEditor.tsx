@@ -13,7 +13,7 @@ interface LineItemsEditorProps {
 
 const EMPTY_LINE: LineItem = { productId: '', quantity: 1, unitPrice: 0 }
 
-/** Shared by PurchaseRequestsPage and PurchaseOrdersPage - the backend deliberately doesn't require a PO's lines to match its originating request's lines, so both forms just start from this same editable row shape. */
+/** Shared product/quantity/unit-price row editor - used by Procurement's purchase request/order create forms and Sales' quotation create form, all of which need the same editable line shape. */
 export function LineItemsEditor({ productNames, lines, onChange, priceLabel = 'Unit price' }: LineItemsEditorProps) {
   const productOptions = Array.from(productNames.entries())
 

@@ -7,8 +7,8 @@ import { listBranchNames, listProductNames } from '../../services/lookupApi'
 import { approvePurchaseRequest, createPurchaseRequest, listPurchaseRequests, rejectPurchaseRequest } from '../../services/procurementApi'
 import type { PurchaseRequestResponse } from '../../types/procurement'
 import { formatCurrency, formatDate } from '../../utils/format'
-import { createEmptyLine, LineItemsEditor } from './LineItemsEditor'
-import type { LineItem } from './LineItemsEditor'
+import { createEmptyLine, LineItemsEditor } from '../../components/LineItemsEditor'
+import type { LineItem } from '../../components/LineItemsEditor'
 
 type ModalState = { kind: 'create' } | { kind: 'reject'; request: PurchaseRequestResponse } | null
 

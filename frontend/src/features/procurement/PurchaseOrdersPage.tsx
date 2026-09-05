@@ -7,8 +7,8 @@ import { listProductNames, listSupplierNames } from '../../services/lookupApi'
 import { createPurchaseOrder, listPurchaseOrders, listPurchaseRequests } from '../../services/procurementApi'
 import type { PurchaseOrderResponse, PurchaseRequestResponse } from '../../types/procurement'
 import { formatCurrency } from '../../utils/format'
-import { LineItemsEditor } from './LineItemsEditor'
-import type { LineItem } from './LineItemsEditor'
+import { LineItemsEditor } from '../../components/LineItemsEditor'
+import type { LineItem } from '../../components/LineItemsEditor'
 
 export function PurchaseOrdersPage() {
   const [orders, setOrders] = useState<PurchaseOrderResponse[]>([])

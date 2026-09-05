@@ -25,6 +25,12 @@ import { ProcurementLayout } from '../features/procurement/ProcurementLayout'
 import { PurchaseRequestsPage } from '../features/procurement/PurchaseRequestsPage'
 import { PurchaseOrdersPage } from '../features/procurement/PurchaseOrdersPage'
 import { SuppliersPage } from '../features/procurement/SuppliersPage'
+import { SalesLayout } from '../features/sales/SalesLayout'
+import { CustomersPage } from '../features/sales/CustomersPage'
+import { QuotationsPage } from '../features/sales/QuotationsPage'
+import { SalesOrdersPage } from '../features/sales/SalesOrdersPage'
+import { DeliveriesPage } from '../features/sales/DeliveriesPage'
+import { InvoicesPage } from '../features/sales/InvoicesPage'
 
 function App() {
   return (
@@ -51,6 +57,14 @@ function App() {
                 <Route path="requests" element={<PurchaseRequestsPage />} />
                 <Route path="orders" element={<PurchaseOrdersPage />} />
                 <Route path="suppliers" element={<SuppliersPage />} />
+              </Route>
+              <Route path="/sales" element={<SalesLayout />}>
+                <Route index element={<Navigate to="/sales/customers" replace />} />
+                <Route path="customers" element={<CustomersPage />} />
+                <Route path="quotations" element={<QuotationsPage />} />
+                <Route path="orders" element={<SalesOrdersPage />} />
+                <Route path="deliveries" element={<DeliveriesPage />} />
+                <Route path="invoices" element={<InvoicesPage />} />
               </Route>
               <Route path="/reports" element={<ReportsLayout />}>
                 <Route index element={<Navigate to="/reports/sales" replace />} />
