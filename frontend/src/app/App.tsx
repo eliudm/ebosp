@@ -35,6 +35,9 @@ import { FinanceLayout } from '../features/finance/FinanceLayout'
 import { OutstandingInvoicesPage } from '../features/finance/OutstandingInvoicesPage'
 import { PaymentsPage } from '../features/finance/PaymentsPage'
 import { SummaryPage } from '../features/finance/SummaryPage'
+import { SecurityLayout } from '../features/security/SecurityLayout'
+import { AuditEventsPage } from '../features/security/AuditEventsPage'
+import { SecurityAlertsPage } from '../features/security/SecurityAlertsPage'
 
 function App() {
   return (
@@ -75,6 +78,11 @@ function App() {
                 <Route path="outstanding-invoices" element={<OutstandingInvoicesPage />} />
                 <Route path="payments" element={<PaymentsPage />} />
                 <Route path="summary" element={<SummaryPage />} />
+              </Route>
+              <Route path="/security" element={<SecurityLayout />}>
+                <Route index element={<Navigate to="/security/audit-events" replace />} />
+                <Route path="audit-events" element={<AuditEventsPage />} />
+                <Route path="alerts" element={<SecurityAlertsPage />} />
               </Route>
               <Route path="/reports" element={<ReportsLayout />}>
                 <Route index element={<Navigate to="/reports/sales" replace />} />
